@@ -26,7 +26,7 @@ class Sample(object):
         self.tumor_barcode = tumor_barcode
         self.norm_barcode = norm_barcode
         self.centers = set()
-        self.mutations = set()
+        self.mutations = {}
         self.brca1 = False
         self.brca2 = False
         self.hr_deficient = False
@@ -38,7 +38,7 @@ class Sample(object):
         self.top_mutation_load = False
         
     def add_mutation(self,hugo_symbol):
-        self.mutations.add(hugo_symbol)
+        self.mutations[hugo_symbol] = self.mutations.get(hugo_symbol, 0) + 1
         if hugo_symbol == "BRCA1":
             self.brca1 = True
         elif hugo_symbol == "BRCA2":
@@ -50,11 +50,16 @@ class Sample(object):
         elif hugo_symbol in MMR_DEFICIENT_GENES:
             self.mmr_deficient = True
         
-    def count_mutations(self):
-        return len(self.mutations)
+    def count_mutations(self, distinct=True):
+        if distinct:
+            return len(self.mutations)
+        return sum(self.mutations.values())
         
     def add_center(self, center):
         self.centers.add(center)
+        
+    def get_gene_mutations(self, hugo_symbol):
+        return self.mutations.get(hugo_symbol, 0)
         
     def update_survival(self, survival_days, update_date):
         if ((not self.survival_update) or update_date > self.survival_update) and survival_days:
@@ -87,33 +92,38 @@ class Mutation(object):
     def add_sample(self, sample):
         self.samples.add(sample)
         
-    def count_top_mutation_load(self):
+    def count_top_mutation_load(self, distinct=True):
         count = 0
         for sample in self.samples:
             if sample.top_mutation_load:
-                count+=1
+                if distinct:
+                    count+=1
+                else:
+                    count+=sample.get_gene_mutations(self.hugo_code)
         return count
                 
-    def count_all_mutation_load(self):
-        return len(self.samples)
+    def count_all_mutation_load(self, distinct=True):
+        if distinct:
+            return len(self.samples)
+        return sum([i.get_gene_mutations(self.hugo_code) for i in self.samples])
         
-    def count_lower_mutation_load(self):
-        return (self.count_all_mutation_load()-self.count_top_mutation_load())
+    def count_lower_mutation_load(self, distinct=True):
+        return (self.count_all_mutation_load(distinct)-self.count_top_mutation_load(distinct))
         
-    def calc_top_mutation_load_patients_ratio(self, top_mutation_load_patients_num):
-        return self.count_top_mutation_load()/top_mutation_load_patients_num
+    def calc_top_mutation_load_patients_ratio(self, top_mutation_load_patients_num, distinct=True):
+        return self.count_top_mutation_load(distinct)/top_mutation_load_patients_num
         
-    def calc_non_top_mutation_load_patients_ratio(self, non_top_mutation_load_patients_num):
-        return self.count_lower_mutation_load()/non_top_mutation_load_patients_num
+    def calc_non_top_mutation_load_patients_ratio(self, non_top_mutation_load_patients_num, distinct=True):
+        return self.count_lower_mutation_load(distinct)/non_top_mutation_load_patients_num
         
-    def calc_patients_ratio(self, patients_num):
-        return self.count_all_mutation_load()/patients_num
+    def calc_patients_ratio(self, patients_num, distinct=True):
+        return self.count_all_mutation_load(distinct)/patients_num
             
-    def calc_top_mutation_load_percent(self, mutations_num):
-        return self.count_top_mutation_load()/mutations_num
+    def calc_top_mutation_load_percent(self, mutations_num, distinct=True):
+        return self.count_top_mutation_load(distinct)/mutations_num
         
-    def calc_lower_mutation_load_percent(self, mutations_num):
-        return self.count_lower_mutation_load()/mutations_num
+    def calc_lower_mutation_load_percent(self, mutations_num, distinct=True):
+        return self.count_lower_mutation_load(distinct)/mutations_num
     
 class MutationsSummary(object):
     def __init__(self, csv_paths, clinical_paths):
@@ -126,7 +136,12 @@ class MutationsSummary(object):
         
     def add_csv_data(self, path):
         with open(path) as f:
-            file_dict = csv.DictReader(f, dialect=csv.excel_tab)
+            while True:
+                #ignoring comment lines in the begining of the file
+                line = f.readline()
+                if line.startswith('Hugo'):
+                    break
+            file_dict = csv.DictReader(f, dialect=csv.excel_tab, fieldnames=line.split("\t"))
             for row in file_dict:
                 tumor_barcode = row["Tumor_Sample_Barcode"]
                 norm_barcode = row["Matched_Norm_Sample_Barcode"]
@@ -174,7 +189,7 @@ class MutationsSummary(object):
     def write_mutation_load_output(self, output_path,cancer):
         self.find_high_mutation_load_patients()
         with open(output_path, "w") as f:
-            csv_file = csv.DictWriter(f, fieldnames=["Hugo_code", "samples_count", "top_mutation_load_samples_count", "total_patients_ratio", "top_mutation_load_patients_ratio", "non_top_mutation_load_patients_ratio", "top_patients_mutations_ratio", "lower_patients_mutations_ratio","cancer"])
+            csv_file = csv.DictWriter(f, fieldnames=["Hugo_code", "samples_count", "top_mutation_load_samples_count", "total_patients_ratio", "top_mutation_load_patients_ratio", "non_top_mutation_load_patients_ratio", "top_patients_mutations_ratio", "lower_patients_mutations_ratio","samples_count_distinct", "top_mutation_load_samples_count_distinct", "total_patients_ratio_distinct", "top_mutation_load_patients_ratio_distinct", "non_top_mutation_load_patients_ratio_distinct", "top_patients_mutations_ratio_distinct", "lower_patients_mutations_ratio_distinct","cancer"])
             csv_file.writeheader()
             patients_num = len(self.ids_dict.keys())
             top_mutation_load_num = len([i for i in self.ids_dict.values() if i.top_mutation_load])
@@ -183,13 +198,20 @@ class MutationsSummary(object):
             lower_patients_mutations_sum = patients_mutations_sum - top_patients_mutations_sum
             for mut in self.mutations_dict.values():
                 row_dict = {"Hugo_code": mut.hugo_code,
-                           "samples_count" : mut.count_all_mutation_load(),
-                           "top_mutation_load_samples_count" : mut.count_top_mutation_load(),
-                           "top_mutation_load_patients_ratio" : mut.calc_top_mutation_load_patients_ratio(top_mutation_load_num),
-                           "total_patients_ratio" : mut.calc_patients_ratio(patients_num),
-                            "non_top_mutation_load_patients_ratio" : mut.calc_non_top_mutation_load_patients_ratio(patients_num - top_mutation_load_num),
-                            "top_patients_mutations_ratio" : mut.calc_top_mutation_load_percent(top_patients_mutations_sum),
-                            "lower_patients_mutations_ratio" : mut.calc_lower_mutation_load_percent(lower_patients_mutations_sum),
+                           "samples_count_distinct" : mut.count_all_mutation_load(),
+                           "top_mutation_load_samples_count_distinct" : mut.count_top_mutation_load(),
+                           "top_mutation_load_patients_ratio_distinct" : mut.calc_top_mutation_load_patients_ratio(top_mutation_load_num),
+                           "total_patients_ratio_distinct" : mut.calc_patients_ratio(patients_num),
+                            "non_top_mutation_load_patients_ratio_distinct" : mut.calc_non_top_mutation_load_patients_ratio(patients_num - top_mutation_load_num),
+                            "top_patients_mutations_ratio_distinct" : mut.calc_top_mutation_load_percent(top_patients_mutations_sum),
+                            "lower_patients_mutations_ratio_distinct" : mut.calc_lower_mutation_load_percent(lower_patients_mutations_sum),
+                            "samples_count" : mut.count_all_mutation_load(False),
+                           "top_mutation_load_samples_count" : mut.count_top_mutation_load(False),
+                           "top_mutation_load_patients_ratio" : mut.calc_top_mutation_load_patients_ratio(top_mutation_load_num, False),
+                           "total_patients_ratio" : mut.calc_patients_ratio(patients_num,False),
+                            "non_top_mutation_load_patients_ratio" : mut.calc_non_top_mutation_load_patients_ratio(patients_num - top_mutation_load_num,False),
+                            "top_patients_mutations_ratio" : mut.calc_top_mutation_load_percent(top_patients_mutations_sum,False),
+                            "lower_patients_mutations_ratio" : mut.calc_lower_mutation_load_percent(lower_patients_mutations_sum,False),
                             "cancer" : cancer}
                 csv_file.writerow(row_dict)
                     

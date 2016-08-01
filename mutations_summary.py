@@ -5,7 +5,7 @@ Created on Sun Jul 24 13:33:35 2016
 @author: gal
 """
 
-import csv, datetime
+import csv, datetime, sys, glob
 import xml.etree.ElementTree as ET
 
 HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "FANCD2", "FANCE", "FANCF",
@@ -19,7 +19,7 @@ NER_DEFICIENT_GENES = ("CCNH", "CDK7", "CENT2",  "DDB1", "DDB2",
                        
 MMR_DEFICIENT_GENES = ("MLH1","MLH3","MSH2","MSH3","MSH6","PMS1","PMS2")
 
-TOP_PERCENTIL = 4 #25%
+TOP_PERCENTIL = 10 #10%
 
 class Sample(object):
     def __init__(self, patient_barcode, tumor_barcode, norm_barcode):
@@ -241,6 +241,18 @@ class MutationsSummary(object):
             for group, group_list in days_dict.items():
                 for days,count in enumerate(group_list):
                     csv_file.writerow({"Days" : days, "Group" : group, "Num" : count, "Cancer" : cancer, "percent out of group" : count/group_count[group]})
+                    
         
             
-                
+    def main():
+        if len(sys.argv) == 4:
+            clinical_paths = glob.glob(sys.argv[3])
+        else:
+            clinical_paths = []
+        summary = MutationsSummary(glob.glob(sys.argv[2]), clinical_paths)
+        summary.write_mutation_load_output("mutations_load_%s.csv" % sys.argv[1], sys.argv[1])
+        
+    if __name__ == "__main__":
+        main()
+        
+        

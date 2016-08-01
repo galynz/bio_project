@@ -244,15 +244,15 @@ class MutationsSummary(object):
                     
         
             
-    def main():
-        if len(sys.argv) == 4:
-            clinical_paths = glob.glob(sys.argv[3])
-        else:
-            clinical_paths = []
-        summary = MutationsSummary(glob.glob(sys.argv[2]), clinical_paths)
-        summary.write_mutation_load_output("mutations_load_%s.csv" % sys.argv[1], sys.argv[1])
-        
-    if __name__ == "__main__":
-        main()
+def main():
+    if len(sys.argv) == 4:
+        clinical_paths = glob.glob(sys.argv[3])
+    else:
+        clinical_paths = []
+    summary = MutationsSummary(glob.glob(sys.argv[2]), clinical_paths)
+    summary.write_mutation_load_output("mutations_load_%s.csv" % sys.argv[1], sys.argv[1])
+    
+if __name__ == "__main__":
+    main()
         
         

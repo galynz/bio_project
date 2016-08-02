@@ -343,7 +343,7 @@ def main():
         clinical_paths = glob.glob(options.clinical_path)
     else:
         clinical_paths = []
-    summary = MutationsSummary(options.csv_path, clinical_paths)
+    summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths)
     summary.write_mutation_load_output("mutations_load_%s.csv" % options.cancer, options.cancer)
     
 if __name__ == "__main__":

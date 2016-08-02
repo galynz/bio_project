@@ -293,7 +293,7 @@ class MutationsSummary(object):
                 csv_file.writerow(row_dict)
                     
     def find_high_low_mutation_load_patients(self):
-        patients_list = sorted(self.ids_dict.values(), key=lambda x: x.count_mutations(), reverse=True)
+        patients_list = sorted(self.ids_dict.values(), key=lambda x: x.count_mutations(False), reverse=True)
         stop_index = int(len(patients_list)/TOP_PERCENTIL)
         for patient in patients_list[:stop_index]:
             patient.update_top_mutation_load()

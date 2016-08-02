@@ -181,9 +181,13 @@ class MutationsSummary(object):
             for row in file_dict:
                 try:
                     tumor_barcode = row["tumor_sample_barcode"]
-                except:
+                    if tumor_barcode.startswith('TCGA')!=True:
+                        raise Exception("Invalid file, tumor barcode doesn't start with TCGA")
+                except Exception, e:
                     print row
                     print path
+                    print e
+                    logger.exception(e)
                     sys.exit()
                 norm_barcode = row["matched_norm_sample_barcode"]
                 patient_barcode = "-".join(tumor_barcode.split('-')[:3])

@@ -176,7 +176,7 @@ class MutationsSummary(object):
             while line.startswith('hugo')==False:
                 #ignoring comment lines in the begining of the file
                 logger.debug("ignoring line in the begining of the file: %s", line)
-                line = f.readline()
+                line = f.readline().lower()
             file_dict = csv.DictReader(f, dialect=csv.excel_tab, fieldnames=line.split())
             for row in file_dict:
                 tumor_barcode = row["tumor_sample_barcode"]

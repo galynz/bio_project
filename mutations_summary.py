@@ -7,6 +7,8 @@ Created on Sun Jul 24 13:33:35 2016
 
 import csv, datetime, sys, glob
 import xml.etree.ElementTree as ET
+import logging
+import logging.handlers
 
 HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "FANCD2", "FANCE", "FANCF",
 "FANCG", "NBN", "PTEN", "U2AF1")
@@ -20,6 +22,8 @@ NER_DEFICIENT_GENES = ("CCNH", "CDK7", "CENT2",  "DDB1", "DDB2",
 MMR_DEFICIENT_GENES = ("MLH1","MLH3","MSH2","MSH3","MSH6","PMS1","PMS2")
 
 TOP_PERCENTIL = 10 #10%
+
+logger = logging.getLogger("mutations_summary")
 
 class Sample(object):
     def __init__(self, patient_barcode, tumor_barcode, norm_barcode):
@@ -37,6 +41,7 @@ class Sample(object):
         self.clinical_available =False
         self.top_mutation_load = False
         self.least_mutation_load = False
+	logger.debug("added sample %s", patient_barcode)
         
     def add_mutation(self,hugo_symbol):
         self.mutations[hugo_symbol] = self.mutations.get(hugo_symbol, 0) + 1
@@ -161,12 +166,12 @@ class MutationsSummary(object):
                 line = f.readline()
                 if line.startswith('Hugo'):
                     break
-            file_dict = csv.DictReader(f, dialect=csv.excel_tab, fieldnames=line.split("\t"))
+            file_dict = csv.DictReader(f, dialect=csv.excel_tab, fieldnames=line.split())
             for row in file_dict:
                 tumor_barcode = row["Tumor_Sample_Barcode"]
                 norm_barcode = row["Matched_Norm_Sample_Barcode"]
                 patient_barcode = "-".join(tumor_barcode.split('-')[:3])
-                mutation = row["Hugo_Symbol"]
+		mutation = row["Hugo_Symbol"]
                 #center = row["Center"]
                 sample = self.ids_dict.setdefault(patient_barcode, Sample(patient_barcode, tumor_barcode, norm_barcode))
                 #sample.add_center(center)

@@ -9,6 +9,7 @@ import csv, datetime, sys, glob
 import xml.etree.ElementTree as ET
 import logging
 import logging.handlers
+from optparse import OptionParser
 
 HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "FANCD2", "FANCE", "FANCF",
 "FANCG", "NBN", "PTEN", "U2AF1")
@@ -27,6 +28,7 @@ logger = logging.getLogger("mutations_summary")
 
 class Sample(object):
     def __init__(self, patient_barcode, tumor_barcode, norm_barcode):
+        self.patient_barcode = patient_barcode
         self.tumor_barcode = tumor_barcode
         self.norm_barcode = norm_barcode
         self.centers = set()
@@ -41,7 +43,7 @@ class Sample(object):
         self.clinical_available =False
         self.top_mutation_load = False
         self.least_mutation_load = False
-	logger.debug("added sample %s", patient_barcode)
+        logger.debug("added sample %s", patient_barcode)
         
     def add_mutation(self,hugo_symbol):
         self.mutations[hugo_symbol] = self.mutations.get(hugo_symbol, 0) + 1
@@ -72,12 +74,15 @@ class Sample(object):
             self.survival_days = survival_days            
             self.survival_update = update_date
             self.clinical_available = True
+            logger.debug("updated patient %s survival days to %s", self.patient_barcode, survival_days)
             
     def update_top_mutation_load(self):
         self.top_mutation_load = True
+        logger.info("patient %s is in top mutation load group", self.patient_barcode)
         
     def update_least_mutation_load(self):
         self.least_mutation_load = True
+        logger.info("patient %s in in lower mutation load group", self.patient_barcode)
         
     def get_group(self):
         group = "HR_PROFIECIENT"
@@ -91,12 +96,14 @@ class Sample(object):
             group = "NER_DEFICIENT"
         elif self.mmr_deficient:
             group =  "MMR_DEFICIENT"
+        logger.debug("patient %s group: %s", self.patient_barcode, group)
         return group
         
 class Mutation(object):
     def __init__(self, hugo_code):
         self.hugo_code = hugo_code
         self.samples = set()
+        logger.debug("added mutation %s", self.hugo_code)
     
     def add_sample(self, sample):
         self.samples.add(sample)
@@ -109,6 +116,7 @@ class Mutation(object):
                     count+=1
                 else:
                     count+=sample.get_gene_mutations(self.hugo_code)
+        logger.debug("mutation %s has %d (distinct=%s) mutations in top group", self.hugo_code, count, distinct)
         return count
         
     def count_lower_mutation_load(self, distinct=True):
@@ -119,6 +127,7 @@ class Mutation(object):
                     count+=1
                 else:
                     count+=sample.get_gene_mutations(self.hugo_code)
+        logger.debug("mutation %s has %d (distinct=%s) mutations in lower group", self.hugo_code, count, distinct)
         return count
                 
     def count_all_mutation_load(self, distinct=True):
@@ -156,8 +165,10 @@ class MutationsSummary(object):
         self.mutations_dict = {}
         for path in csv_paths:
             self.add_csv_data(path)
-        for path in clinical_paths:
+            logger.info("added %s to csv files", path)
+        for path in clinical_paths:            
             self.add_clinical_data(path)
+            logger.info("added %s to clinical files", path)
         
     def add_csv_data(self, path):
         with open(path) as f:
@@ -166,12 +177,13 @@ class MutationsSummary(object):
                 line = f.readline()
                 if line.startswith('Hugo'):
                     break
+                logger.debug("ignoring line in the begining of the file: %s", line)
             file_dict = csv.DictReader(f, dialect=csv.excel_tab, fieldnames=line.split())
             for row in file_dict:
                 tumor_barcode = row["Tumor_Sample_Barcode"]
                 norm_barcode = row["Matched_Norm_Sample_Barcode"]
                 patient_barcode = "-".join(tumor_barcode.split('-')[:3])
-		mutation = row["Hugo_Symbol"]
+                mutation = row["Hugo_Symbol"]
                 #center = row["Center"]
                 sample = self.ids_dict.setdefault(patient_barcode, Sample(patient_barcode, tumor_barcode, norm_barcode))
                 #sample.add_center(center)
@@ -192,12 +204,15 @@ class MutationsSummary(object):
         sample = self.ids_dict.get(patient_barcode, None)
         if sample:
             if days_to_last_followup:
+                logger.debug("updating patient %s survival according to days_to_last_followup", patient_barcode)
                 sample.update_survival(days_to_last_followup, update_date)
             else:
+                logger.debug("updating patient %s survival according to days_to_death", patient_barcode)
                 sample.update_survival(days_to_death, update_date)
         
                 
     def write_output(self, output_path, cancer):
+        logger.info("writing output file %s", output_path)
         with open(output_path, "w") as f:
             csv_file = csv.DictWriter(f, fieldnames=["Tumor_Sample_Barcode", "Matched_Norm_Sample_Barcode", "Group", "Mutations_Count", "Cancer_Site", "Survival_days"])
             csv_file.writeheader()
@@ -213,6 +228,7 @@ class MutationsSummary(object):
                     
     def write_mutation_load_output(self, output_path,cancer):
         self.find_high_low_mutation_load_patients()
+        logger.info("writing mutation load output file %s", output_path)
         with open(output_path, "w") as f:
             csv_file = csv.DictWriter(f, fieldnames=["Hugo_code", "samples_count",
                                                      "top_mutation_load_samples_count", 
@@ -277,6 +293,7 @@ class MutationsSummary(object):
                 
                 
     def write_survival_output(self, output_path, cancer):
+        logger.info("writing survival output file %s", output_path)
         with open(output_path, "w") as f:
             csv_file = csv.DictWriter(f,  fieldnames = ["Days", "Group", "Num", "percent out of group","Cancer"])
             csv_file.writeheader()
@@ -299,12 +316,35 @@ class MutationsSummary(object):
         
             
 def main():
-    if len(sys.argv) == 4:
-        clinical_paths = glob.glob(sys.argv[3])
+    parser = OptionParser()
+    parser.add_option("-c", "--cancer", dest="cancer", help="tumor main site")
+    parser.add_option("-p", "--csv_path", dest="csv_path", help="csv paths, use '' if the path contains *")
+    parser.add_option("--clinical_path", dest="clinical_path", help="clinical paths, use '' if the path contains *")
+    parser.add_option("--debug", default=False, action="store_false", dest="debug", help="ruu the script in debug mode")
+    
+    (options, args) = parser.parse_args()
+    
+    # Logger
+    formatter = logging.Formatter('%(process)d %(asctime)s %(levelname)s %(message)s')
+    handler = logging.handlers.RotatingFileHandler(
+              "mutations_summary.log", maxBytes=10*1024*1024, backupCount=5, mode="a")
+
+    if options.debug:
+        logging_level = logging.DEBUG
+    else:
+        logging_level = logging.INFO
+    logger.setLevel(logging_level)
+    handler.setLevel(logging_level)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.info("starting the script")
+    
+    if options.clinical_path:
+        clinical_paths = glob.glob(options.clinical_path)
     else:
         clinical_paths = []
-    summary = MutationsSummary(glob.glob(sys.argv[2]), clinical_paths)
-    summary.write_mutation_load_output("mutations_load_%s.csv" % sys.argv[1], sys.argv[1])
+    summary = MutationsSummary(options.csv_path, clinical_paths)
+    summary.write_mutation_load_output("mutations_load_%s.csv" % options.cancer, options.cancer)
     
 if __name__ == "__main__":
     main()

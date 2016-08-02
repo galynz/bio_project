@@ -172,12 +172,12 @@ class MutationsSummary(object):
         
     def add_csv_data(self, path):
         with open(path) as f:
-            line = f.readline()
-            while line.startswith('Hugo')==False:
-                #ignoring comment lines in the begining of the file
-                logger.debug("ignoring line in the begining of the file: %s", line)
-                line = f.readline()
-            file_dict = csv.DictReader(f, dialect=csv.excel_tab, fieldnames=line.split())
+#            line = f.readline()
+#            while line.startswith('Hugo')==False:
+#                #ignoring comment lines in the begining of the file
+#                logger.debug("ignoring line in the begining of the file: %s", line)
+#                line = f.readline()
+            file_dict = csv.DictReader(f, dialect=csv.excel_tab)#, fieldnames=line.split())
             for row in file_dict:
                 tumor_barcode = row["Tumor_Sample_Barcode"]
                 norm_barcode = row["Matched_Norm_Sample_Barcode"]

@@ -139,25 +139,25 @@ class Mutation(object):
         return (self.count_all_mutation_load(distinct)-self.count_top_mutation_load(distinct))
         
     def calc_top_mutation_load_patients_ratio(self, top_mutation_load_patients_num, distinct=True):
-        return self.count_top_mutation_load(distinct)/top_mutation_load_patients_num
+        return float(self.count_top_mutation_load(distinct))/top_mutation_load_patients_num
         
     def calc_low_mutation_load_patients_ratio(self, low_mutation_load_patients_num, distinct=True):
-        return self.count_low_mutation_load(distinct)/low_mutation_load_patients_num
+        return float(self.count_low_mutation_load(distinct))/low_mutation_load_patients_num
         
     def calc_non_top_mutation_load_patients_ratio(self, non_top_mutation_load_patients_num, distinct=True):
-        return self.count_non_top_mutation_load(distinct)/non_top_mutation_load_patients_num
+        return float(self.count_non_top_mutation_load(distinct))/non_top_mutation_load_patients_num
         
     def calc_patients_ratio(self, patients_num, distinct=True):
-        return self.count_all_mutation_load(distinct)/patients_num
+        return float(self.count_all_mutation_load(distinct))/patients_num
             
     def calc_top_mutation_load_percent(self, mutations_num, distinct=True):
-        return self.count_top_mutation_load(distinct)/mutations_num
+        return float(self.count_top_mutation_load(distinct))/mutations_num
         
     def calc_low_mutation_load_percent(self, mutations_num, distinct=True):
-        return self.count_low_mutation_load(distinct)/mutations_num
+        return float(self.count_low_mutation_load(distinct))/mutations_num
         
     def calc_non_top_mutation_load_percent(self, mutations_num, distinct=True):
-        return self.count_non_top_mutation_load(distinct)/mutations_num
+        return float(self.count_non_top_mutation_load(distinct))/mutations_num
     
 class MutationsSummary(object):
     def __init__(self, csv_paths, clinical_paths):

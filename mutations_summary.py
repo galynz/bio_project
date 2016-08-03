@@ -11,8 +11,8 @@ import logging
 import logging.handlers
 from optparse import OptionParser
 
-HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "FANCD2", "FANCE", "FANCF",
-"FANCG", "NBN", "PTEN", "U2AF1")
+HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "BRCA1","BRCA2",
+                      "FANCD2", "FANCE", "FANCF","FANCG", "NBN", "PTEN", "U2AF1")
 
 NER_DEFICIENT_GENES = ("CCNH", "CDK7", "CENT2",  "DDB1", "DDB2",
                        "ERCC1", "ERCC2","ERCC3", "ERCC4", "ERCC5", 
@@ -33,11 +33,11 @@ class Sample(object):
         self.norm_barcode = norm_barcode
         self.centers = set()
         self.mutations = {}
-        self.brca1 = False
-        self.brca2 = False
-        self.hr_deficient = False
-        self.ner_deficient = False
-        self.mmr_deficient = False
+        self.brca1 = 0
+        self.brca2 = 0
+        self.hr_deficient = 0
+        self.ner_deficient = 0
+        self.mmr_deficient = 0
         self.survival_days = 0
         self.survival_update = None
         self.clinical_available =False
@@ -48,15 +48,15 @@ class Sample(object):
     def add_mutation(self,hugo_symbol):
         self.mutations[hugo_symbol] = self.mutations.get(hugo_symbol, 0) + 1
         if hugo_symbol == "BRCA1":
-            self.brca1 = True
-        elif hugo_symbol == "BRCA2":
-            self.brca2 = True
-        elif hugo_symbol in HR_DEFICIENT_GENES:
-            self.hr_deficient = True
-        elif hugo_symbol in NER_DEFICIENT_GENES:
-            self.ner_deficient = True
-        elif hugo_symbol in MMR_DEFICIENT_GENES:
-            self.mmr_deficient = True
+            self.brca1 += 1
+        if hugo_symbol == "BRCA2":
+            self.brca2 += 1
+        if hugo_symbol in HR_DEFICIENT_GENES:
+            self.hr_deficient += 1
+        if hugo_symbol in NER_DEFICIENT_GENES:
+            self.ner_deficient += 1
+        if hugo_symbol in MMR_DEFICIENT_GENES:
+            self.mmr_deficient += 1
         
     def count_mutations(self, distinct=True):
         if distinct:
@@ -222,7 +222,12 @@ class MutationsSummary(object):
     def write_output(self, output_path, cancer):
         logger.info("writing output file %s", output_path)
         with open(output_path, "w") as f:
-            csv_file = csv.DictWriter(f, fieldnames=["Tumor_Sample_Barcode", "Matched_Norm_Sample_Barcode", "Group", "Mutations_Count", "Cancer_Site", "Survival_days"])
+            csv_file = csv.DictWriter(f, fieldnames=["Tumor_Sample_Barcode",
+                                                     "Matched_Norm_Sample_Barcode", 
+                                                     "Group", "Mutations_Count", 
+                                                     "Cancer_Site", "Survival_days",
+                                                     "BRCA1_mutated", "BRCA2_mutated",
+                                                     "HR_mutated", "NER_mutated", "MMR_mutated"])
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()
@@ -231,7 +236,12 @@ class MutationsSummary(object):
                             "Group" :  group,
                             "Mutations_Count" : sample.count_mutations(),
                             "Cancer_Site" : cancer,
-                            "Survival_days" : sample.survival_days}
+                            "Survival_days" : sample.survival_days,
+                            "BRCA1_mutated" : sample.brca1,
+                            "BRCA2_mutated" : sample.brca2,
+                            "HR_mutated" : sample.hr_deficient,
+                            "NER_mutated" : sample.ner_deficient,
+                            "MMR_mutated" : sample.mmr_deficient}
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer):
@@ -354,6 +364,8 @@ def main():
         clinical_paths = []
     summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths)
     summary.write_mutation_load_output("mutations_load_%s.csv" % options.cancer, options.cancer)
+    summary.write_output("patients_summary_%s.csv" % options.cancer, options.cancer)
+    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     
 if __name__ == "__main__":
     main()

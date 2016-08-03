@@ -65,7 +65,7 @@ class Sample(object):
             return sum([len(i) for i in self.mutations.values()])
         if mutation_type:
             #  count only specific mutation types
-            return sum([self.mutations.get(i, {}).values() for i in mutation_type])
+            return sum([sum(self.mutations.get(i, {}).values()) for i in mutation_type])
         # count all the mutations, regardless of mutations type
         return sum([sum(i.values()) for i in self.mutations.values()])
         

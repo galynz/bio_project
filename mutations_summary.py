@@ -354,7 +354,7 @@ def main():
     parser.add_option("-p", "--csv_path", dest="csv_path", help="csv paths, use '' if the path contains *")
     parser.add_option("--clinical_path", dest="clinical_path", help="clinical paths, use '' if the path contains *")
     parser.add_option("--debug", default=False, action="store_false", dest="debug", help="run the script in debug mode")
-    parser.add_option("-m", "--mutation_types", dest="mutation_types", nargs=20, help="mutation types (silent, missense...) to report")
+    parser.add_option("-m", "--mutation_types", dest="mutation_types", default=(), nargs=20, help="mutation types (silent, missense...) to report")
     
     (options, args) = parser.parse_args()
     

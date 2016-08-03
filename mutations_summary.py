@@ -207,7 +207,7 @@ class MutationsSummary(object):
                 #center = row["Center"]
                 sample = self.ids_dict.setdefault(patient_barcode, Sample(patient_barcode, tumor_barcode, norm_barcode))
                 #sample.add_center(center)
-                sample.add_mutation(mutation)
+                sample.add_mutation(mutation, mutation_type)
                 
                 mutation_obj = self.mutations_dict.setdefault(mutation, Mutation(mutation))
                 mutation_obj.add_sample(sample)

@@ -244,18 +244,32 @@ class MutationsSummary(object):
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()
-                row_dict = {"Tumor_Sample_Barcode" : sample.tumor_barcode,
-                            "Matched_Norm_Sample_Barcode" : sample.norm_barcode,
-                            "Group" :  group,
-                            "Mutations_Count" : sample.count_mutations(False, mutation_type),
-                            "Mutations_Count_distinct" : sample.count_mutations(mutation_type=mutation_type),
-                            "Cancer_Site" : cancer,
-                            "Survival_days" : sample.survival_days,
-                            "BRCA1_mutated" : sum([sample.brca1.get(i, 0) for i in mutation_type]),
-                            "BRCA2_mutated" : sum([sample.brca2.get(i, 0) for i in mutation_type]),
-                            "HR_mutated" : sum([sample.hr_deficient.get(i, 0) for i in mutation_type]),
-                            "NER_mutated" : sum([sample.ner_deficient.get(i, 0) for i in mutation_type]),
-                            "MMR_mutated" : sum([sample.mmr_deficient.get(i, 0) for i in mutation_type])}
+                if mutation_type:
+                    row_dict = {"Tumor_Sample_Barcode" : sample.tumor_barcode,
+                                "Matched_Norm_Sample_Barcode" : sample.norm_barcode,
+                                "Group" :  group,
+                                "Mutations_Count" : sample.count_mutations(False, mutation_type),
+                                "Mutations_Count_distinct" : sample.count_mutations(mutation_type=mutation_type),
+                                "Cancer_Site" : cancer,
+                                "Survival_days" : sample.survival_days,
+                                "BRCA1_mutated" : sum([sample.brca1.get(i, 0) for i in mutation_type]),
+                                "BRCA2_mutated" : sum([sample.brca2.get(i, 0) for i in mutation_type]),
+                                "HR_mutated" : sum([sample.hr_deficient.get(i, 0) for i in mutation_type]),
+                                "NER_mutated" : sum([sample.ner_deficient.get(i, 0) for i in mutation_type]),
+                                "MMR_mutated" : sum([sample.mmr_deficient.get(i, 0) for i in mutation_type])}
+                else:
+                    row_dict = {"Tumor_Sample_Barcode" : sample.tumor_barcode,
+                                "Matched_Norm_Sample_Barcode" : sample.norm_barcode,
+                                "Group" :  group,
+                                "Mutations_Count" : sample.count_mutations(False, mutation_type),
+                                "Mutations_Count_distinct" : sample.count_mutations(mutation_type=mutation_type),
+                                "Cancer_Site" : cancer,
+                                "Survival_days" : sample.survival_days,
+                                "BRCA1_mutated" : sum(sample.brca1.values()),
+                                "BRCA2_mutated" : sum(sample.brca2.values()),
+                                "HR_mutated" : sum(sample.hr_deficient.values()),
+                                "NER_mutated" : sum(sample.ner_deficient.values()),
+                                "MMR_mutated" : sum(sample.mmr_deficient.values())}
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer, mutation_type):

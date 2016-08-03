@@ -251,11 +251,11 @@ class MutationsSummary(object):
                             "Mutations_Count_distinct" : sample.count_mutations(mutation_type=mutation_type),
                             "Cancer_Site" : cancer,
                             "Survival_days" : sample.survival_days,
-                            "BRCA1_mutated" : sample.brca1,
-                            "BRCA2_mutated" : sample.brca2,
-                            "HR_mutated" : sample.hr_deficient,
-                            "NER_mutated" : sample.ner_deficient,
-                            "MMR_mutated" : sample.mmr_deficient}
+                            "BRCA1_mutated" : sum([sample.brca1.get(i, 0) for i in mutation_type]),
+                            "BRCA2_mutated" : sum([sample.brca2.get(i, 0) for i in mutation_type]),
+                            "HR_mutated" : sum([sample.hr_deficient.get(i, 0) for i in mutation_type]),
+                            "NER_mutated" : sum([sample.ner_deficient.get(i, 0) for i in mutation_type]),
+                            "MMR_mutated" : sum([sample.mmr_deficient.get(i, 0) for i in mutation_type])}
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer, mutation_type):

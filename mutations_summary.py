@@ -225,6 +225,7 @@ class MutationsSummary(object):
             csv_file = csv.DictWriter(f, fieldnames=["Tumor_Sample_Barcode",
                                                      "Matched_Norm_Sample_Barcode", 
                                                      "Group", "Mutations_Count", 
+                                                     "Mutations_Count_distinct",
                                                      "Cancer_Site", "Survival_days",
                                                      "BRCA1_mutated", "BRCA2_mutated",
                                                      "HR_mutated", "NER_mutated", "MMR_mutated"])
@@ -234,7 +235,8 @@ class MutationsSummary(object):
                 row_dict = {"Tumor_Sample_Barcode" : sample.tumor_barcode,
                             "Matched_Norm_Sample_Barcode" : sample.norm_barcode,
                             "Group" :  group,
-                            "Mutations_Count" : sample.count_mutations(),
+                            "Mutations_Count" : sample.count_mutations(False),
+                            "Mutations_Count_distinct" : sample.count_mutations(),
                             "Cancer_Site" : cancer,
                             "Survival_days" : sample.survival_days,
                             "BRCA1_mutated" : sample.brca1,

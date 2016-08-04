@@ -11,6 +11,25 @@ import logging
 import logging.handlers
 from optparse import OptionParser
 
+from plotly.offline import download_plotlyjs, init_notebook_mode,  plot
+import plotly.graph_objs as go
+import numpy as np
+import pandas as pd
+import lifelines as ll
+
+# Plotting helpers
+from IPython.display import HTML
+import matplotlib.pyplot as plt
+import plotly.plotly as py
+import plotly.tools as tls   
+from plotly.graph_objs import *
+from lifelines.statistics import logrank_test
+
+from pylab import rcParams
+rcParams['figure.figsize']=10, 5
+
+init_notebook_mode()
+
 HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "BRCA1","BRCA2",
                       "FANCD2", "FANCE", "FANCF","FANCG", "NBN", "PTEN", "U2AF1")
 
@@ -40,7 +59,8 @@ class Sample(object):
         self.mmr_deficient = {}
         self.survival_days = 0
         self.survival_update = None
-        self.clinical_available =False
+        self.dead = False
+        self.clinical_available = False
         self.top_mutation_load = False
         self.low_mutation_load = False
         logger.debug("added sample %s", patient_barcode)
@@ -77,11 +97,12 @@ class Sample(object):
             return sum([self.mutations.get(i, {}).get(hugo_symbol, 0) for i in mutation_type])
         return sum([i.get(hugo_symbol, 0) for i in self.mutations.values()])
         
-    def update_survival(self, survival_days, update_date):
+    def update_survival(self, survival_days, update_date, dead=False):
         if ((not self.survival_update) or update_date > self.survival_update) and survival_days:
             self.survival_days = survival_days            
             self.survival_update = update_date
             self.clinical_available = True
+            self.dead = dead
             logger.debug("updated patient %s survival days to %s", self.patient_barcode, survival_days)
             
     def update_top_mutation_load(self):
@@ -228,7 +249,7 @@ class MutationsSummary(object):
                 sample.update_survival(days_to_last_followup, update_date)
             else:
                 logger.debug("updating patient %s survival according to days_to_death", patient_barcode)
-                sample.update_survival(days_to_death, update_date)
+                sample.update_survival(days_to_death, update_date, True)
         
                 
     def write_output(self, output_path, cancer, mutation_type):
@@ -339,27 +360,147 @@ class MutationsSummary(object):
             patient.update_low_mutation_load()
                 
                 
-    def write_survival_output(self, output_path, cancer):
-        logger.info("writing survival output file %s", output_path)
-        with open(output_path, "w") as f:
-            csv_file = csv.DictWriter(f,  fieldnames = ["Days", "Group", "Num", "percent out of group","Cancer"])
-            csv_file.writeheader()
-            days_dict = {}
-            group_count = {}
-            for sample in self.ids_dict.values():
-                group = sample.get_group()
-                group_list = days_dict.setdefault(group, [])
-                if sample.clinical_available:
-                    group_count[group] = group_count.get(group, 0) + 1
-                    for i in range(0,int(sample.survival_days)):
-                        if i >= len(group_list):
-                            group_list += [1]
-                        else:
-                            group_list[i] += 1
-            for group, group_list in days_dict.items():
-                for days,count in enumerate(group_list):
-                    csv_file.writerow({"Days" : days, "Group" : group, "Num" : count, "Cancer" : cancer, "percent out of group" : count/group_count[group]})
+#    def write_survival_output(self, output_path, cancer):
+#        logger.info("writing survival output file %s", output_path)
+#        with open(output_path, "w") as f:
+#            csv_file = csv.DictWriter(f,  fieldnames = ["Days", "Group", "Num", "percent out of group","Cancer"])
+#            csv_file.writeheader()
+#            days_dict = {}
+#            group_count = {}
+#            for sample in self.ids_dict.values():
+#                group = sample.get_group()
+#                group_list = days_dict.setdefault(group, [])
+#                if sample.clinical_available:
+#                    group_count[group] = group_count.get(group, 0) + 1
+#                    for i in range(0,int(sample.survival_days)):
+#                        if i >= len(group_list):
+#                            group_list += [1]
+#                        else:
+#                            group_list[i] += 1
+#            for group, group_list in days_dict.items():
+#                for days,count in enumerate(group_list):
+#                    csv_file.writerow({"Days" : days, "Group" : group, "Num" : count, "Cancer" : cancer, "percent out of group" : count/group_count[group]})
                     
+    def plot_mutation_load_box(self, output_path, cancer, distinct, mutation_type):
+        logger.info("plotting mutation load box plots and saving it to %s", output_path)
+        count_dict ={}
+        groups = ('brca1', 'brca2', 'hr_deficient', 'ner_deficient', 'mmr_deficient')
+        for group in groups:
+            count_dict[group] = {'deficient' : [], 'proficient' : []}
+        for sample in self.ids_dict.values():
+            count = sample.count_mutations(distinct, mutation_type)
+            for group in groups:
+                has_mutation = getattr(sample, group)
+                if has_mutation:
+                    count_dict[group]['deficient'].append(count)
+                else:
+                    count_dict[group]['proficient'].append(count)
+        x_deficient = []
+        x_proficient = []
+        
+        y_deficient = []
+        y_proficient = []
+        
+        for group in groups:
+            x_deficient.extend([group] * len(count_dict[group]['deficient']))
+            y_deficient.extend(count_dict[group]['deficient'])
+            x_proficient.extend([group] * len(count_dict[group]['proficient']))
+            y_proficient.extend(count_dict[group]['proficient'])
+        deficient = go.Box(y=y_deficient, x=x_deficient, 
+                           name='deficient', marker=dict(color='#3D9970'))
+        proficient = go.Box(y=y_proficient, x=x_proficient, 
+                           name='proficient', marker=dict(color='#FF4136'))
+        data = [deficient, proficient]
+        
+        layout = go.Layout(yaxis=dict(title='%s mutation overload by group (deficient/proficient)'% cancer,
+                                      zeroline=False),
+                            boxmode='group')
+        fig = go.Figure(data=data, layout=layout)
+        plot(fig, output_path)
+     
+     
+    def plot_survival(self, output_path, cancer):
+        self.find_high_low_mutation_load_patients()
+        l = [(i.patient_barcode, int(i.survival_days), i.dead, i.get_group(), bool(i.brca1), bool(i.brca2), bool(i.hr_deficient), bool(i.ner_deficient), bool(i.mmr_deficient), i.top_mutation_load, i.low_mutation_load) for i in self.ids_dict.values() if i.clinical_available]
+        df = pd.DataFrame(data=l, columns=["patient_barcode", "days", "dead", "group", 'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load'])
+        groups = ('BRCA1', 'BRCA2', 'HR', 'NER', 'MMR')
+        T = df['days']
+        C = df['dead']
+        kmf = ll.KaplanMeierFitter()
+        for i, group in enumerate(groups):            
+            ax = plt.subplot(2,3,i+1)
+            ix = (df[group] == True)
+            kmf.fit(T[~ix], C[~ix], label='%s_proficient' % group)
+            kmf.plot(ax=ax)
+            kmf.fit(T[ix], C[ix], label='%s_deficient' % group)
+            kmf.plot(ax=ax, legend=True)
+            ax.set_title('%s survival - %s'% (group, cancer))
+#            print group
+#            print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.95)
+        plt.tight_layout()
+        kmf1 = plt.gcf()
+        pyplot(kmf1, output_path + '%s.html' % cancer, ci=False)
+            
+        kmf = ll.KaplanMeierFitter()
+        groups = ('BRCA1_MUTATED', 'BRCA2_MUTATED', 'HR_DEFICIENT', 'NER_DEFICIENT', 'MMR_DEFICIENT','HR_PROFIECIENT')
+        ax = plt.subplot(111)
+        for group in groups:
+            ix = (df['group'] == group)
+            kmf.fit(T[ix], C[ix], label=group)
+            kmf.survival_function_.plot(ax=ax)
+        plt.title("survival by groups - %s" % cancer)
+        kmf2 = plt.gcf()
+        pyplot(kmf2, output_path + '.%s.groups_compare.html'% cancer, ci=False)
+    
+            
+        kmf = ll.KaplanMeierFitter()
+        ax = plt.subplot(111)
+        ix = (df['top_mutation_load'] == True)
+        kmf.fit(T[ix], C[ix], label='top_mutation_load_patients')
+        kmf.survival_function_.plot(ax=ax)
+        ix = (df['low_mutation_load'] == True)
+        kmf.fit(T[ix], C[ix], label='low_mutation_load_patients')
+        kmf.survival_function_.plot(ax=ax)
+        plt.title('top/low mutation load patients survival - %s'% cancer)
+        kmf3 = plt.gcf()
+        pyplot(kmf3, output_path + '.top_low_mutation_load_patietns.%s.html' % (cancer), ci=False)
+#        print 'top/low mutation load patients'
+#        print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.95)
+        
+        
+        
+        
+
+def pyplot(fig, output_path, ci=False, legend=True):
+    # Convert mpl fig obj to plotly fig obj, resize to plotly's default
+    py_fig = tls.mpl_to_plotly(fig, resize=True)
+    
+    # Add fill property to lower limit line
+    if ci == True:
+        style1 = dict(fill='tonexty')
+        # apply style
+        py_fig['data'][2].update(style1)
+        
+        # Change color scheme to black
+        py_fig['data'].update(dict(line=Line(color='black')))
+    
+    # change the default line type to 'step'
+    py_fig['data'].update(dict(line=Line(shape='hv')))
+    # Delete misplaced legend annotations 
+    py_fig['layout'].pop('annotations', None)
+    
+    if legend == True:
+        # Add legend, place it at the top right corner of the plot
+        py_fig['layout'].update(
+            showlegend=True,
+            legend=Legend(
+                x=1.05,
+                y=1
+            )
+        )
+        
+    # Send updated figure object to Plotly, show result in notebook
+    return plot(py_fig, filename=output_path)
         
             
 def main():
@@ -394,9 +535,9 @@ def main():
     summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths)
     summary.write_mutation_load_output("mutations_load_%s.csv" % options.cancer, options.cancer, args)
     summary.write_output("patients_summary_%s.csv" % options.cancer, options.cancer, args)
-    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
+#    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#    main()
         
         

@@ -43,6 +43,8 @@ MMR_DEFICIENT_GENES = ("MLH1","MLH3","MSH2","MSH3","MSH6","PMS1","PMS2")
 
 TOP_PERCENTIL = 10 #10%
 
+HOT_SPOT_TRESHOLD = 3
+
 logger = logging.getLogger("mutations_summary")
 
 class Sample(object):
@@ -63,11 +65,15 @@ class Sample(object):
         self.clinical_available = False
         self.top_mutation_load = False
         self.low_mutation_load = False
+        self.hot_spots = 0
         logger.debug("added sample %s", patient_barcode)
         
     def add_mutation(self,hugo_symbol, mutation_type):
         self.mutations.setdefault(mutation_type, {}).setdefault(hugo_symbol, 0)
         self.mutations[mutation_type][hugo_symbol] += 1
+        count = sum([i.get(hugo_symbol, 0) for i in self.mutations.values()])
+        if count == HOT_SPOT_TRESHOLD:
+            self.hot_spots+=1
         if hugo_symbol == "BRCA1":
             self.brca1[mutation_type] = self.brca1.get(mutation_type, 0) + 1
         if hugo_symbol == "BRCA2":
@@ -129,6 +135,28 @@ class Sample(object):
         logger.debug("patient %s group: %s", self.patient_barcode, group)
         return group
         
+    def check_group_deficient(self, group, mutation_type):
+        has_mutation = getattr(self, group)                
+        if has_mutation:                    
+            if mutation_type:
+            # making sure that the mutation is of type we want to consider
+                has_mutation_type = False
+                for mut_type in mutation_type:
+                    if has_mutation.has_key(mut_type):
+                        has_mutation_type = True
+                        break
+                if has_mutation_type:
+                    return True
+                else:
+                    # if the mutations in this group are of wrong types, return False
+                    return False
+            else:
+                # if we want to consider all mutation types
+                return True
+        else:
+            return False
+
+        
 class Mutation(object):
     def __init__(self, hugo_code):
         self.hugo_code = hugo_code
@@ -189,7 +217,7 @@ class Mutation(object):
         return float(self.count_low_mutation_load(distinct,mutation_type))/mutations_num
         
     def calc_non_top_mutation_load_percent(self, mutations_num, distinct=True,mutation_type=[]):
-        return float(self.count_non_top_mutation_load(distinct,mutation_type))/mutations_num
+        return float(self.count_non_top_mutation_load(distinct,mutation_type))/mutations_num                 
     
 class MutationsSummary(object):
     def __init__(self, csv_paths, clinical_paths):
@@ -390,10 +418,10 @@ class MutationsSummary(object):
         for sample in self.ids_dict.values():
             count = sample.count_mutations(distinct, mutation_type)
             for group in groups:
-                has_mutation = getattr(sample, group)
-                if has_mutation:
-                    count_dict[group]['deficient'].append(count)
+                if sample.check_group_deficient(group, mutation_type):
+                    count_dict[group]['deficient'].append(count)                        
                 else:
+                    # the patient has no mutations in this gene/pathway
                     count_dict[group]['proficient'].append(count)
         x_deficient = []
         x_proficient = []
@@ -402,9 +430,11 @@ class MutationsSummary(object):
         y_proficient = []
         
         for group in groups:
-            x_deficient.extend([group] * len(count_dict[group]['deficient']))
+#            print group, len(count_dict[group]['deficient'])
+            pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            x_deficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['deficient']))
             y_deficient.extend(count_dict[group]['deficient'])
-            x_proficient.extend([group] * len(count_dict[group]['proficient']))
+            x_proficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['proficient']))
             y_proficient.extend(count_dict[group]['proficient'])
         deficient = go.Box(y=y_deficient, x=x_deficient, 
                            name='deficient', marker=dict(color='#3D9970'))
@@ -412,16 +442,16 @@ class MutationsSummary(object):
                            name='proficient', marker=dict(color='#FF4136'))
         data = [deficient, proficient]
         
-        layout = go.Layout(yaxis=dict(title='%s mutation overload by group (deficient/proficient)'% cancer,
+        layout = go.Layout(yaxis=dict(title='%s mutation load by group (deficient/proficient)'% cancer,
                                       zeroline=False),
                             boxmode='group')
         fig = go.Figure(data=data, layout=layout)
         plot(fig, output_path)
      
      
-    def plot_survival(self, output_path, cancer):
+    def plot_survival(self, output_path, cancer, mutation_type=[]):
         self.find_high_low_mutation_load_patients()
-        l = [(i.patient_barcode, int(i.survival_days), i.dead, i.get_group(), bool(i.brca1), bool(i.brca2), bool(i.hr_deficient), bool(i.ner_deficient), bool(i.mmr_deficient), i.top_mutation_load, i.low_mutation_load) for i in self.ids_dict.values() if i.clinical_available]
+        l = [(i.patient_barcode, int(i.survival_days), i.dead, i.get_group(), i.check_group_deficient('brca1', mutation_type), i.check_group_deficient('brca2', mutation_type), i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load) for i in self.ids_dict.values() if i.clinical_available]
         df = pd.DataFrame(data=l, columns=["patient_barcode", "days", "dead", "group", 'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load'])
         groups = ('BRCA1', 'BRCA2', 'HR', 'NER', 'MMR')
         T = df['days']
@@ -464,10 +494,57 @@ class MutationsSummary(object):
         plt.title('top/low mutation load patients survival - %s'% cancer)
         kmf3 = plt.gcf()
         pyplot(kmf3, output_path + '.top_low_mutation_load_patietns.%s.html' % (cancer), ci=False)
-#        print 'top/low mutation load patients'
-#        print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.95)
+        print 'top/low mutation load patients'
+        print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.95)
         
         
+    def plot_hot_spot_box(self, output_path, cancer, plot_type='box', mutation_type=[]):
+        logger.info("plotting hot spots box plots and saving it to %s", output_path)
+        count_dict ={}
+        groups = ('brca1', 'brca2', 'hr_deficient', 'ner_deficient', 'mmr_deficient')
+        for group in groups:
+            count_dict[group] = {'deficient' : [], 'proficient' : []}
+        for sample in self.ids_dict.values():
+            count = sample.hot_spots
+            for group in groups:
+                if sample.check_group_deficient(group, mutation_type):
+                    count_dict[group]['deficient'].append(count)                        
+                else:
+                    # the patient has no mutations in this gene/pathway
+                    count_dict[group]['proficient'].append(count)
+        x_deficient = []
+        x_proficient = []
+        
+        y_deficient = []
+        y_proficient = []
+        
+        for group in groups:
+            pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            x_deficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['deficient']))
+            y_deficient.extend(count_dict[group]['deficient'])
+            x_proficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['proficient']))
+            y_proficient.extend(count_dict[group]['proficient'])
+        if plot_type == 'bar':
+            ### NOT recommended
+            deficient = go.Bar(y=y_deficient, x=x_deficient, 
+                           name='deficient', marker=dict(color='#199219'))
+            proficient = go.Bar(y=y_proficient, x=x_proficient, 
+                           name='proficient', marker=dict(color='#78c578'))
+            data = [deficient, proficient]
+            layout = go.Layout(yaxis=dict(title='%s hot spots load by group (deficient/proficient)'% cancer,
+                                      zeroline=False),
+                            barmode='group')
+        elif plot_type == 'box':
+            deficient = go.Box(y=y_deficient, x=x_deficient, 
+                           name='deficient', marker=dict(color='#199219'))
+            proficient = go.Box(y=y_proficient, x=x_proficient, 
+                           name='proficient', marker=dict(color='#78c578'))
+            data = [deficient, proficient]
+            layout = go.Layout(yaxis=dict(title='%s hot spots load by group (deficient/proficient)'% cancer,
+                                      zeroline=False),
+                            boxmode='group')
+        fig = go.Figure(data=data, layout=layout)
+        plot(fig, output_path)
         
         
 

@@ -586,7 +586,8 @@ def main():
     parser.add_option("-p", "--csv_path", dest="csv_path", help="csv paths, use '' if the path contains *")
     parser.add_option("--clinical_path", dest="clinical_path", help="clinical paths, use '' if the path contains *")
     parser.add_option("--debug", default=False, action="store_false", dest="debug", help="run the script in debug mode")
-    #parser.add_option("-m", "--mutation_types", dest="mutation_types", default=(), nargs=20, help="mutation types (silent, missense...) to report")
+    parser.add_option("-m", "--mutation_types", dest="mutation_types", default="", help="mutation types (silent, missense...) to report, a string")
+    parser.add_option("-o", "--output", dest="output_path",default="output", help="where to save all the html files")
     
     (options, args) = parser.parse_args()
     
@@ -609,10 +610,17 @@ def main():
         clinical_paths = glob.glob(options.clinical_path)
     else:
         clinical_paths = []
+    if options.mutation_types:
+        mutation_types = options.mutation_types.split(",")
+    else:
+        mutation_types = []
     summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths)
     summary.write_mutation_load_output("mutations_load_%s.csv" % options.cancer, options.cancer, args)
     summary.write_output("patients_summary_%s.csv" % options.cancer, options.cancer, args)
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
+    summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
+    summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_types=mutation_types)
+    summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
     
 #if __name__ == "__main__":
 #    main()

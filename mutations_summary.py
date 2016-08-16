@@ -446,7 +446,7 @@ class MutationsSummary(object):
                                       zeroline=False),
                             boxmode='group')
         fig = go.Figure(data=data, layout=layout)
-        plot(fig, output_path)
+        plot(fig, filename=output_path, auto_open=False)
      
      
     def plot_survival(self, output_path, cancer, mutation_type=[]):
@@ -544,7 +544,7 @@ class MutationsSummary(object):
                                       zeroline=False),
                             boxmode='group')
         fig = go.Figure(data=data, layout=layout)
-        plot(fig, output_path)
+        plot(fig, filename=output_path, auto_open=False)
         
         
 
@@ -577,7 +577,7 @@ def pyplot(fig, output_path, ci=False, legend=True):
         )
         
     # Send updated figure object to Plotly, show result in notebook
-    return plot(py_fig, filename=output_path)
+    return plot(py_fig, filename=output_path, auto_open=False)
         
             
 def main():

@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 import logging
 import logging.handlers
 from optparse import OptionParser
+import gzip
 
 from plotly.offline import download_plotlyjs, init_notebook_mode,  plot
 import plotly.graph_objs as go
@@ -18,7 +19,7 @@ import pandas as pd
 import lifelines as ll
 
 # Plotting helpers
-from IPython.display import HTML
+#from IPython.display import HTML
 import matplotlib.pyplot as plt
 import plotly.plotly as py
 import plotly.tools as tls   
@@ -28,7 +29,7 @@ from lifelines.statistics import logrank_test
 from pylab import rcParams
 rcParams['figure.figsize']=10, 5
 
-init_notebook_mode()
+#init_notebook_mode()
 
 HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "BRCA1","BRCA2",
                       "FANCD2", "FANCE", "FANCF","FANCG", "NBN", "PTEN", "U2AF1")
@@ -231,7 +232,7 @@ class MutationsSummary(object):
             logger.info("added %s to clinical files", path)
         
     def add_csv_data(self, path):
-        with open(path) as f:
+        with gzip.open(path) as f:
             line = f.readline().lower()
             while line.startswith('hugo')==False:
                 #ignoring comment lines in the begining of the file
@@ -619,10 +620,10 @@ def main():
     summary.write_output("patients_summary_%s.csv" % options.cancer, options.cancer, mutation_types)
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
-    summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_types=mutation_types)
-    summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
+    summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
+    #summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
     
-#if __name__ == "__main__":
-#    main()
+if __name__ == "__main__":
+    main()
         
         

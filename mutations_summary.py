@@ -13,14 +13,14 @@ from optparse import OptionParser
 
 from plotly.offline import download_plotlyjs, init_notebook_mode,  plot
 import plotly.graph_objs as go
-import numpy as np
+#import numpy as np
 import pandas as pd
 import lifelines as ll
 
 # Plotting helpers
-from IPython.display import HTML
+#from IPython.display import HTML
 import matplotlib.pyplot as plt
-import plotly.plotly as py
+#import plotly.plotly as py
 import plotly.tools as tls   
 from plotly.graph_objs import *
 from lifelines.statistics import logrank_test

@@ -255,7 +255,7 @@ class MutationsSummary(object):
                 patient_barcode = "-".join(tumor_barcode.split('-')[:3])
                 mutation = row["hugo_symbol"]
                 mutation_type = row["variant_classification"]
-                mutation_pos = row["Start_Position"]
+                mutation_pos = row["start_position"]
                 #center = row["Center"]
                 sample = self.ids_dict.setdefault(patient_barcode, Sample(patient_barcode, tumor_barcode, norm_barcode))
                 #sample.add_center(center)

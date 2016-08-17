@@ -615,8 +615,8 @@ def main():
     else:
         mutation_types = []
     summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths)
-    summary.write_mutation_load_output("mutations_load_%s.csv" % options.cancer, options.cancer, args)
-    summary.write_output("patients_summary_%s.csv" % options.cancer, options.cancer, args)
+    summary.write_mutation_load_output("mutations_load_%s.csv" % options.cancer, options.cancer, mutation_types)
+    summary.write_output("patients_summary_%s.csv" % options.cancer, options.cancer, mutation_types)
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
     summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_types=mutation_types)

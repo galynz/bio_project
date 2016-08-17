@@ -69,22 +69,23 @@ class Sample(object):
         self.hot_spots = 0
         logger.debug("added sample %s", patient_barcode)
         
-    def add_mutation(self,hugo_symbol, mutation_type):
-        self.mutations.setdefault(mutation_type, {}).setdefault(hugo_symbol, 0)
-        self.mutations[mutation_type][hugo_symbol] += 1
-        count = sum([i.get(hugo_symbol, 0) for i in self.mutations.values()])
-        if count == HOT_SPOT_TRESHOLD:
-            self.hot_spots+=1
-        if hugo_symbol == "BRCA1":
-            self.brca1[mutation_type] = self.brca1.get(mutation_type, 0) + 1
-        if hugo_symbol == "BRCA2":
-            self.brca2[mutation_type] = self.brca2.get(mutation_type, 0) + 1
-        if hugo_symbol in HR_DEFICIENT_GENES:
-            self.hr_deficient[mutation_type] = self.hr_deficient.get(mutation_type, 0) + 1
-        if hugo_symbol in NER_DEFICIENT_GENES:
-            self.ner_deficient[mutation_type] = self.ner_deficient.get(mutation_type, 0) + 1
-        if hugo_symbol in MMR_DEFICIENT_GENES:
-            self.mmr_deficient[mutation_type] = self.mmr_deficient.get(mutation_type, 0) + 1
+    def add_mutation(self,hugo_symbol, mutation_type, mutation_pos):
+        self.mutations.setdefault(mutation_type, {}).setdefault(hugo_symbol, set())
+        if not self.mutations[mutation_type][hugo_symbol].intersection(set(mutation_pos)):
+            self.mutations[mutation_type][hugo_symbol].add(mutation_pos)
+            count = sum([len(i.get(hugo_symbol, set())) for i in self.mutations.values()])
+            if count == HOT_SPOT_TRESHOLD:
+                self.hot_spots+=1
+            if hugo_symbol == "BRCA1":
+                self.brca1[mutation_type] = self.brca1.get(mutation_type, 0) + 1
+            if hugo_symbol == "BRCA2":
+                self.brca2[mutation_type] = self.brca2.get(mutation_type, 0) + 1
+            if hugo_symbol in HR_DEFICIENT_GENES:
+                self.hr_deficient[mutation_type] = self.hr_deficient.get(mutation_type, 0) + 1
+            if hugo_symbol in NER_DEFICIENT_GENES:
+                self.ner_deficient[mutation_type] = self.ner_deficient.get(mutation_type, 0) + 1
+            if hugo_symbol in MMR_DEFICIENT_GENES:
+                self.mmr_deficient[mutation_type] = self.mmr_deficient.get(mutation_type, 0) + 1
         
     def count_mutations(self, distinct=True, mutation_type=None):
         if distinct:
@@ -92,17 +93,17 @@ class Sample(object):
             return sum([len(i) for i in self.mutations.values()])
         if mutation_type:
             #  count only specific mutation types
-            return sum([sum(self.mutations.get(i, {}).values()) for i in mutation_type])
+            return sum([sum([len(j) for j in self.mutations.get(i, {}).values()]) for i in mutation_type])
         # count all the mutations, regardless of mutations type
-        return sum([sum(i.values()) for i in self.mutations.values()])
+        return sum([sum([len(j) for j in i.values()]) for i in self.mutations.values()])
         
     def add_center(self, center):
         self.centers.add(center)
         
     def get_gene_mutations(self, hugo_symbol, mutation_type=[]):
         if mutation_type:
-            return sum([self.mutations.get(i, {}).get(hugo_symbol, 0) for i in mutation_type])
-        return sum([i.get(hugo_symbol, 0) for i in self.mutations.values()])
+            return sum([len(self.mutations.get(i, {}).get(hugo_symbol, set())) for i in mutation_type])
+        return sum([len(i.get(hugo_symbol, set())) for i in self.mutations.values()])
         
     def update_survival(self, survival_days, update_date, dead=False):
         if ((not self.survival_update) or update_date > self.survival_update) and survival_days:
@@ -254,10 +255,11 @@ class MutationsSummary(object):
                 patient_barcode = "-".join(tumor_barcode.split('-')[:3])
                 mutation = row["hugo_symbol"]
                 mutation_type = row["variant_classification"]
+                mutation_pos = row["Start_Position"]
                 #center = row["Center"]
                 sample = self.ids_dict.setdefault(patient_barcode, Sample(patient_barcode, tumor_barcode, norm_barcode))
                 #sample.add_center(center)
-                sample.add_mutation(mutation, mutation_type)
+                sample.add_mutation(mutation, mutation_type, mutation_pos)
                 
                 mutation_obj = self.mutations_dict.setdefault(mutation, Mutation(mutation))
                 mutation_obj.add_sample(sample)

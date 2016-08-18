@@ -12,6 +12,8 @@ import logging.handlers
 from optparse import OptionParser
 import gzip
 
+import matplotlib
+matplotlib.use('Agg')
 from plotly.offline import download_plotlyjs, init_notebook_mode,  plot
 import plotly.graph_objs as go
 import numpy as np
@@ -42,7 +44,7 @@ NER_DEFICIENT_GENES = ("CCNH", "CDK7", "CENT2",  "DDB1", "DDB2",
                        
 MMR_DEFICIENT_GENES = ("MLH1","MLH3","MSH2","MSH3","MSH6","PMS1","PMS2")
 
-TOP_PERCENTIL = 10 #10%
+TOP_PERCENTIL = 4 #25%
 
 HOT_SPOT_TRESHOLD = 3
 
@@ -434,7 +436,7 @@ class MutationsSummary(object):
         
         for group in groups:
 #            print group, len(count_dict[group]['deficient'])
-            pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient'], equal_var=False).pvalue
             x_deficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['deficient']))
             y_deficient.extend(count_dict[group]['deficient'])
             x_proficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['proficient']))
@@ -481,6 +483,7 @@ class MutationsSummary(object):
             ix = (df['group'] == group)
             kmf.fit(T[ix], C[ix], label=group)
             kmf.survival_function_.plot(ax=ax)
+            #kmf.survival_function_.plot()
         plt.title("survival by groups - %s" % cancer)
         kmf2 = plt.gcf()
         pyplot(kmf2, output_path + '.%s.groups_compare.html'% cancer, ci=False)
@@ -491,14 +494,17 @@ class MutationsSummary(object):
         ix = (df['top_mutation_load'] == True)
         kmf.fit(T[ix], C[ix], label='top_mutation_load_patients')
         kmf.survival_function_.plot(ax=ax)
-        ix = (df['low_mutation_load'] == True)
-        kmf.fit(T[ix], C[ix], label='low_mutation_load_patients')
+        ix2 = (df['low_mutation_load'] == True)
+        kmf.fit(T[ix2], C[ix2], label='low_mutation_load_patients')
+        kmf.survival_function_.plot(ax=ax)
+        kmf.fit(T, C, label='all_patients')
         kmf.survival_function_.plot(ax=ax)
         plt.title('top/low mutation load patients survival - %s'% cancer)
         kmf3 = plt.gcf()
         pyplot(kmf3, output_path + '.top_low_mutation_load_patietns.%s.html' % (cancer), ci=False)
         print 'top/low mutation load patients'
-        print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.95)
+        print logrank_test(T[ix], T[ix2], C[ix], C[ix2], alpha=0.95)
+        print 'top:', len(T[ix]), 'low:', len(T[ix2])
         
         
     def plot_hot_spot_box(self, output_path, cancer, plot_type='box', mutation_type=[]):
@@ -522,7 +528,7 @@ class MutationsSummary(object):
         y_proficient = []
         
         for group in groups:
-            pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient'], equal_var=False).pvalue
             x_deficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['deficient']))
             y_deficient.extend(count_dict[group]['deficient'])
             x_proficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['proficient']))
@@ -623,7 +629,7 @@ def main():
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
     summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
-    #summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
+    summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
     
 if __name__ == "__main__":
     main()

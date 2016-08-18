@@ -467,11 +467,14 @@ class MutationsSummary(object):
         for i, group in enumerate(groups):            
             ax = plt.subplot(2,3,i+1)
             ix = (df[group] == True)
-            kmf.fit(T[~ix], C[~ix], label='%s_proficient' % group)
-            kmf.plot(ax=ax)
-            kmf.fit(T[ix], C[ix], label='%s_deficient' % group)
-            kmf.plot(ax=ax, legend=True)
-            ax.set_title('%s survival - %s'% (group, cancer))
+            if ix:
+                kmf.fit(T[~ix], C[~ix], label='%s_proficient' % group)
+                kmf.plot(ax=ax)
+                kmf.fit(T[ix], C[ix], label='%s_deficient' % group)
+                kmf.plot(ax=ax, legend=True)
+                ax.set_title('%s survival - %s'% (group, cancer))
+            else:
+                logger.info("cancer %s has no %s deficient", cancer, group)
 #            print group
 #            print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.95)
         plt.tight_layout()
@@ -483,8 +486,9 @@ class MutationsSummary(object):
         ax = plt.subplot(111)
         for group in groups:
             ix = (df['group'] == group)
-            kmf.fit(T[ix], C[ix], label=group)
-            kmf.survival_function_.plot(ax=ax)
+            if ix:
+                kmf.fit(T[ix], C[ix], label=group)
+                kmf.survival_function_.plot(ax=ax)
             #kmf.survival_function_.plot()
         plt.title("survival by groups - %s" % cancer)
         kmf2 = plt.gcf()
@@ -504,6 +508,7 @@ class MutationsSummary(object):
         plt.title('top/low mutation load patients survival - %s'% cancer)
         kmf3 = plt.gcf()
         pyplot(kmf3, output_path + '.top_low_mutation_load_patietns.%s.html' % (cancer), ci=False)
+        print "cancer:", cancer
         print 'top/low mutation load patients'
         print logrank_test(T[ix], T[ix2], C[ix], C[ix2], alpha=0.95)
         print 'top:', len(T[ix]), 'low:', len(T[ix2])

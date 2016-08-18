@@ -91,6 +91,8 @@ class Sample(object):
         
     def count_mutations(self, distinct=True, mutation_type=None):
         if distinct:
+            if mutation_type:
+                return sum([len(self.mutations.get(mut_type, {})) for mut_type in mutation_type])
             # return the number of genes that has a mutation
             return sum([len(i) for i in self.mutations.values()])
         if mutation_type:
@@ -614,6 +616,7 @@ def main():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.info("starting the script")
+    logger.info("cancer type: %s", options.cancer)
     
     if options.clinical_path:
         clinical_paths = glob.glob(options.clinical_path)
@@ -624,8 +627,8 @@ def main():
     else:
         mutation_types = []
     summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths)
-    summary.write_mutation_load_output("mutations_load_%s.csv" % options.cancer, options.cancer, mutation_types)
-    summary.write_output("patients_summary_%s.csv" % options.cancer, options.cancer, mutation_types)
+    summary.write_mutation_load_output("%s.mutation_load.csv" % options.output_path, options.cancer, mutation_types)
+    summary.write_output("%s.patients_summary.csv" % options.output_path, options.cancer, mutation_types)
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
     summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)

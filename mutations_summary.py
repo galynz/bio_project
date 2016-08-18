@@ -467,7 +467,7 @@ class MutationsSummary(object):
         for i, group in enumerate(groups):            
             ax = plt.subplot(2,3,i+1)
             ix = (df[group] == True)
-            if ix:
+            if df.any(group) and not df.all(group):
                 kmf.fit(T[~ix], C[~ix], label='%s_proficient' % group)
                 kmf.plot(ax=ax)
                 kmf.fit(T[ix], C[ix], label='%s_deficient' % group)
@@ -486,7 +486,7 @@ class MutationsSummary(object):
         ax = plt.subplot(111)
         for group in groups:
             ix = (df['group'] == group)
-            if ix:
+            if df.any(group) and not df.all(group):
                 kmf.fit(T[ix], C[ix], label=group)
                 kmf.survival_function_.plot(ax=ax)
             #kmf.survival_function_.plot()

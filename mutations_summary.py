@@ -104,7 +104,16 @@ class Sample(object):
     def add_center(self, center):
         self.centers.add(center)
         
-    def get_gene_mutations(self, hugo_symbol, mutation_type=[]):
+    def get_gene_mutations(self, hugo_symbol, distinct=True, mutation_type=[]):
+        if distinct:
+            if mutation_type:
+                for i in mutation_type:
+                    if self.mutations.get(i, {}).get(hugo_symbol, set()):
+                        return 1
+                return 0
+            if sum([len(i.get(hugo_symbol, set())) for i in self.mutations.values()]):
+                return 1
+            return 0
         if mutation_type:
             return sum([len(self.mutations.get(i, {}).get(hugo_symbol, set())) for i in mutation_type])
         return sum([len(i.get(hugo_symbol, set())) for i in self.mutations.values()])
@@ -176,11 +185,7 @@ class Mutation(object):
         count = 0
         for sample in self.samples:
             if sample.top_mutation_load:
-                if distinct:
-                    #TODO: add mutation type check
-                    count+=1
-                else:
-                    count+=sample.get_gene_mutations(self.hugo_code,mutation_type)
+                count+=sample.get_gene_mutations(self.hugo_code, distinct, mutation_type)
         logger.debug("mutation %s has %d (distinct=%s) mutations in top group (mutation_type %s)", self.hugo_code, count, distinct, mutation_type)
         return count
         
@@ -188,18 +193,12 @@ class Mutation(object):
         count = 0
         for sample in self.samples:
             if sample.low_mutation_load:
-                if distinct:
-                    #TODO: add mutation type check
-                    count+=1
-                else:
-                    count+=sample.get_gene_mutations(self.hugo_code, mutation_type)
+                count+=sample.get_gene_mutations(self.hugo_code, distinct, mutation_type)
         logger.debug("mutation %s has %d (distinct=%s) mutations in low group (mutation_type %s)", self.hugo_code, count, distinct, mutation_type)
         return count
                 
     def count_all_mutation_load(self, distinct=True, mutation_type=[]):
-        if distinct:
-            return len(self.samples)
-        return sum([i.get_gene_mutations(self.hugo_code, mutation_type) for i in self.samples])
+        return sum([i.get_gene_mutations(self.hugo_code, distinct, mutation_type) for i in self.samples])
         
     def count_non_top_mutation_load(self, distinct=True,  mutation_type=[]):
         return (self.count_all_mutation_load(distinct, mutation_type)-self.count_top_mutation_load(distinct, mutation_type))

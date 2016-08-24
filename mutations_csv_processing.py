@@ -68,7 +68,7 @@ class CancerMutations(object):
                 mutation_cancer_ratio_dict[mutation][cancer] = ratio
         #return mutation_cancer_ratio_dict
         headers = ['Hugo_symbol'] + self.mutations_summary_dict.keys()
-        with open(output_path, 'w') as f:
+        with open(output_path, 'wb') as f:
             writer = csv.DictWriter(f, headers)
             writer.writeheader()
             for cancers_dict in mutation_cancer_ratio_dict.values():

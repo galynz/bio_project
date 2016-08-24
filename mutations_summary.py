@@ -11,6 +11,7 @@ import logging
 import logging.handlers
 from optparse import OptionParser
 import gzip
+from tqdm import tqdm
 
 import matplotlib
 matplotlib.use('Agg')
@@ -288,7 +289,7 @@ class MutationsSummary(object):
                 
     def write_output(self, output_path, cancer, mutation_type):
         logger.info("writing output file %s", output_path)
-        with open(output_path, "w") as f:
+        with open(output_path, "wb") as f:
             csv_file = csv.DictWriter(f, fieldnames=["Tumor_Sample_Barcode",
                                                      "Matched_Norm_Sample_Barcode", 
                                                      "Group", "Mutations_Count", 
@@ -330,7 +331,7 @@ class MutationsSummary(object):
     def write_mutation_load_output(self, output_path,cancer, mutation_type):
         self.find_high_low_mutation_load_patients(mutation_type)
         logger.info("writing mutation load output file %s", output_path)
-        with open(output_path, "w") as f:
+        with open(output_path, "wb") as f:
             csv_file = csv.DictWriter(f, fieldnames=["Hugo_code", "samples_count",
                                                      "top_mutation_load_samples_count", 
                                                      "low_mutation_load_samples_count", 
@@ -561,7 +562,76 @@ class MutationsSummary(object):
         fig = go.Figure(data=data, layout=layout)
         plot(fig, filename=output_path, auto_open=False)
         
+    def create_samples_mutations_dataframe(self, mutation_type):
+        samples_list = sorted(self.ids_dict.keys())
+        mutation_list = sorted(self.mutations_dict.keys())
+        self.samples_mutations_dataframe = pd.DataFrame()
+        for mutation in tqdm(mutation_list):
+            mutation_samples = []
+            for sample_id in samples_list:
+                sample = self.ids_dict[sample_id]
+                mutation_samples.append(sample.get_gene_mutations(mutation, False, mutation_type=mutation_type))
+            self.samples_mutations_dataframe[mutation] = mutation_samples
+        self.samples_mutations_dataframe['mutations_num'] = self.samples_mutations_dataframe.sum(axis=1, numeric_only=True)
         
+        self.find_high_low_mutation_load_patients(mutation_type)
+        self.samples_mutations_dataframe['top_mutation_load'] = [self.ids_dict[sample_id].top_mutation_load for sample_id in samples_list]
+        self.samples_mutations_dataframe['low_mutation_load'] = [self.ids_dict[sample_id].low_mutation_load for sample_id in samples_list]
+        
+    def calc_mutation_ratio(self):
+        samples_mutation_count = self.samples_mutations_dataframe.sum(axis=1, numeric_only=True)
+        self.samples_mutations_ratio_dataframe = pd.DataFrame()
+        for column in self.samples_mutations_dataframe.columns[:-3]:
+            self.samples_mutations_ratio_dataframe[column] = self.samples_mutations_dataframe[column]/samples_mutation_count
+        self.samples_mutations_ratio_dataframe['top_mutation_load'] = self.samples_mutations_dataframe['top_mutation_load']
+        self.samples_mutations_ratio_dataframe['low_mutation_load'] = self.samples_mutations_dataframe['low_mutation_load']
+        
+    def calc_mutation_ratio_pvalue_top_non_top(self):
+        top_mutation_load = (self.samples_mutations_ratio_dataframe['top_mutation_load'] == True)
+        #low_mutation_load = (self.samples_mutations_ratio_dataframe['low_mutation_load'] == True)
+        self.mutation_ratio_pvalue_top_low = pd.DataFrame()
+        for mutation in self.samples_mutations_ratio_dataframe.columns[:-3]:
+            self.mutation_ratio_pvalue_top_low[mutation] = [tls.scipy.stats.ttest_ind(self.samples_mutations_ratio_dataframe[top_mutation_load][mutation], self.samples_mutations_ratio_dataframe[~top_mutation_load][mutation]).pvalue]
+            
+    def create_mutations_ratio_pvalue_csv(self, mutation_type, output_path):
+        self.create_samples_mutations_dataframe(mutation_type)
+        self.calc_mutation_ratio()
+        self.calc_mutation_ratio_pvalue_top_non_top()
+        top_mutation_load = (self.samples_mutations_ratio_dataframe['top_mutation_load'] == True)
+        with open(output_path, 'wb') as f:
+            csv_writer = csv.DictWriter(f, ['Hugo_symbol', 'p-value', 'top_avg_ratio', 'non_top_avg_ratio'])
+            csv_writer.writeheader()
+            for mutation in self.mutation_ratio_pvalue_top_low.columns:
+                csv_writer.writerow({'Hugo_symbol' : mutation,
+                                     'p-value' : self.mutation_ratio_pvalue_top_low[mutation][0],
+                                     'top_avg_ratio' : self.samples_mutations_ratio_dataframe[mutation][top_mutation_load].sum()/len(self.samples_mutations_ratio_dataframe[mutation][top_mutation_load]),
+                                     'non_top_avg_ratio' : self.samples_mutations_ratio_dataframe[mutation][~top_mutation_load].sum()/len(self.samples_mutations_ratio_dataframe[mutation][~top_mutation_load])})
+        
+    def create_mutations_overload_pvalue_csv(self, output_path):
+        with open(output_path, 'wb') as f:
+            csv_writer = csv.DictWriter(f, ['Hugo_symbol', 't-test_p-value',
+                                            'ks-test_p-value',
+                                            'deficient_num', 'proficient_num', 
+                                            'deficient_mean', 'proficient_mean',
+                                            'deficient_median', 'proficient_median',
+                                            'deficient_std', 'proficient_std'])
+            csv_writer.writeheader()
+            for mutation in tqdm(self.samples_mutations_dataframe.columns[:-3]):
+                ix = self.samples_mutations_dataframe[mutation] > 0
+                deficient = self.samples_mutations_dataframe[ix]['mutations_num']
+                proficient = self.samples_mutations_dataframe[~ix]['mutations_num']
+                if len(deficient) > 20:
+                    csv_writer.writerow({'Hugo_symbol' : mutation,
+                                         't-test_p-value' : tls.scipy.stats.ttest_ind(deficient, proficient, equal_var=False).pvalue,
+                                         'ks-test_p-value' : tls.scipy.stats.ks_2samp(deficient, proficient).pvalue,
+                                         'deficient_num' : len(deficient),
+                                         'proficient_num' : len(proficient),
+                                         'deficient_mean' : tls.scipy.mean(deficient),
+                                         'proficient_mean' : tls.scipy.mean(proficient),
+                                         'deficient_median' : tls.scipy.median(deficient),
+                                         'proficient_median' : tls.scipy.median(proficient),
+                                         'deficient_std' : tls.scipy.std(deficient),
+                                         'proficient_std' : tls.scipy.std(proficient)})
 
 def pyplot(fig, output_path, ci=False, legend=True):
     # Convert mpl fig obj to plotly fig obj, resize to plotly's default
@@ -637,8 +707,10 @@ def main():
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
     summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
     summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
+    summary.create_samples_mutations_dataframe(mutation_types)
+    summary.create_mutations_overload_pvalue_csv('%s.mutation_load_per_mutation.csv' % options.output_path)
     
-if __name__ == "__main__":
-    main()
+#if __name__ == "__main__":
+#    main()
         
         

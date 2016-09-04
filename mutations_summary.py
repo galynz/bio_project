@@ -72,6 +72,8 @@ class Sample(object):
         self.low_mutation_load = False
         self.hot_spots = 0
         self.drugs_dict = {}
+        self.new_tumor_event = False
+        self.days_to_new_tumor = None
         logger.debug("added sample %s", patient_barcode)
         
     def add_mutation(self,hugo_symbol, mutation_type, mutation_pos):
@@ -128,6 +130,9 @@ class Sample(object):
             self.clinical_available = True
             self.dead = dead
             logger.debug("updated patient %s survival days to %s", self.patient_barcode, survival_days)
+        if (not self.new_tumor_event) and survival_days > self.days_to_new_tumor:
+            #Updating days to new tumor incase there is no new tumor
+            self.days_to_new_tumor = survival_days
             
     def update_top_mutation_load(self):
         self.top_mutation_load = True
@@ -191,6 +196,10 @@ class Sample(object):
     def get_last_drug_name(self):
         self.sort_drugs_chronologically()
         return [i.get('drug_name', 'None') for i in self.drugs_list_sorted[-1]]
+        
+    def set_days_to_new_tumor(self, days):
+        self.new_tumor_event = True
+        self.days_to_new_tumor = days
 
         
 class Mutation(object):
@@ -298,6 +307,7 @@ class MutationsSummary(object):
         update_year = int(tree.findtext(".//{http://tcga.nci/bcr/xml/administration/2.7}year_of_dcc_upload"))
         update_date = datetime.date(update_year, update_month, update_day)
         sample = self.ids_dict.get(patient_barcode, None)
+        days_to_new_tumor = tree.findtext(".//{http://tcga.nci/bcr/xml/clinical/shared/new_tumor_event/2.7}days_to_new_tumor_event_after_initial_treatment")
         if sample:
             drugs = tree.findall('.//{http://tcga.nci/bcr/xml/clinical/pharmaceutical/2.7}drug')
             drugs_dict = {}
@@ -321,6 +331,9 @@ class MutationsSummary(object):
             else:
                 logger.debug("updating patient %s survival according to days_to_death", patient_barcode)
                 sample.update_survival(days_to_death, update_date, True)
+            if days_to_new_tumor and days_to_new_tumor.isdigit():
+                sample.set_days_to_new_tumor(int(days_to_new_tumor))
+                
                 
     def write_output(self, output_path, cancer, mutation_type):
         logger.info("writing output file %s", output_path)
@@ -497,8 +510,8 @@ class MutationsSummary(object):
      
     def plot_survival(self, output_path, cancer, mutation_type=[]):
         self.find_high_low_mutation_load_patients()
-        l = [(i.patient_barcode, int(i.survival_days), i.dead, i.get_group(), i.check_group_deficient('brca1', mutation_type), i.check_group_deficient('brca2', mutation_type), i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load) for i in self.ids_dict.values() if i.clinical_available]
-        df = pd.DataFrame(data=l, columns=["patient_barcode", "days", "dead", "group", 'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load'])
+        l = [(i.patient_barcode, int(i.survival_days), i.dead, i.get_group(), i.check_group_deficient('brca1', mutation_type), i.check_group_deficient('brca2', mutation_type), i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, i.new_tumor_event, i.days_to_new_tumor) for i in self.ids_dict.values() if i.clinical_available]
+        df = pd.DataFrame(data=l, columns=["patient_barcode", "days", "dead", "group", 'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'new_tumor_event', 'days_to_new_tumor'])
 #        groups = ('BRCA1', 'BRCA2', 'HR', 'NER', 'MMR')
         T = df['days']
         C = df['dead']
@@ -533,7 +546,7 @@ class MutationsSummary(object):
 #        kmf2 = plt.gcf()
 #        pyplot(kmf2, output_path + '.%s.groups_compare.html'% cancer, ci=False)
     
-            
+        #Survival top/low and top/non-top    
         kmf = ll.KaplanMeierFitter()
         ax = plt.subplot(111)
         ix = (df['top_mutation_load'] == True)
@@ -555,6 +568,33 @@ class MutationsSummary(object):
         print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.99)
         print 'top:', len(T[ix]), 'non-top:', len(T[~ix])
         
+        #Days to new tumor top/low and top/non-top
+        kmf = ll.KaplanMeierFitter()
+        ax = plt.subplot(111)
+        T2 = df['days_to_new_tumor']
+        C2 = df['new_tumor_event']
+        kmf.fit(T2[ix], C2[ix], label='top_mutation_load_patients')
+        kmf.survival_function_.plot(ax=ax)
+        ix2 = (df['low_mutation_load'] == True)
+        kmf.fit(T2[ix2], C2[ix2], label='low_mutation_load_patients')
+        kmf.survival_function_.plot(ax=ax)
+        kmf.fit(T2, C2, label='all_patients')
+        kmf.survival_function_.plot(ax=ax)
+        plt.title('top/low mutation load patients new tumor event after initial treatment - %s'% cancer)
+        kmf3 = plt.gcf()
+        pyplot(kmf3, output_path + '.top_low_mutation_load_patietns_new_tumor.%s.html' % (cancer), ci=False)
+        print "cancer:", cancer
+        print "days to new tumor event"
+        print 'top/low mutation load patients'
+        print logrank_test(T2[ix], T2[ix2], C2[ix], C2[ix2], alpha=0.99)
+        print 'top:', len(T2[ix]), 'low:', len(T2[ix2])
+        print 'top/non-top mutation load patients'
+        print logrank_test(T2[ix], T2[~ix], C2[ix], C2[~ix], alpha=0.99)
+        print 'top:', len(T2[ix]), 'non-top:', len(T2[~ix])
+        
+        print len(df), "patients"
+        print df['dead'].value_counts()
+        print df['new_tumor_event'].value_counts()
         
     def plot_hot_spot_box(self, output_path, cancer, plot_type='box', mutation_type=[]):
         logger.info("plotting hot spots box plots and saving it to %s", output_path)

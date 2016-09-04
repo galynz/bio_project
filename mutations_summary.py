@@ -474,9 +474,10 @@ class MutationsSummary(object):
         for group in groups:
 #            print group, len(count_dict[group]['deficient'])
             pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient'], equal_var=False).pvalue
-            x_deficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['deficient']))
+            ks_pvalue = tls.scipy.stats.ks_2samp(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            x_deficient.extend(['%s<br>t_test-pvalue=%s<br>ks-pvalue=%s' % (group, pvalue, ks_pvalue)] * len(count_dict[group]['deficient']))
             y_deficient.extend(count_dict[group]['deficient'])
-            x_proficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['proficient']))
+            x_proficient.extend(['%s<br>t_test-pvalue=%s<br>ks-pvalue=%s' % (group, pvalue, ks_pvalue)] * len(count_dict[group]['proficient']))
             y_proficient.extend(count_dict[group]['proficient'])
         deficient = go.Box(y=y_deficient, x=x_deficient, 
                            name='deficient', marker=dict(color='#3D9970'))
@@ -574,9 +575,10 @@ class MutationsSummary(object):
         
         for group in groups:
             pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient'], equal_var=False).pvalue
-            x_deficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['deficient']))
+            ks_pvalue = tls.scipy.stats.ks_2samp(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            x_deficient.extend(['%s<br>t_test-pvalue=%s<br>ks-pvalue=%s' % (group, pvalue, ks_pvalue)] * len(count_dict[group]['deficient']))
             y_deficient.extend(count_dict[group]['deficient'])
-            x_proficient.extend(['%s<br>(pvalue=%s)' % (group, pvalue)] * len(count_dict[group]['proficient']))
+            x_proficient.extend(['%s<br>t_test-pvalue=%s<br>ks-pvalue=%s' % (group, pvalue, ks_pvalue)] * len(count_dict[group]['proficient']))
             y_proficient.extend(count_dict[group]['proficient'])
         if plot_type == 'bar':
             ### NOT recommended

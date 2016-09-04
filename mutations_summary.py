@@ -12,6 +12,7 @@ import logging.handlers
 from optparse import OptionParser
 import gzip
 from tqdm import tqdm
+from Bio import Entrez
 
 import matplotlib
 matplotlib.use('Agg')
@@ -70,6 +71,7 @@ class Sample(object):
         self.top_mutation_load = False
         self.low_mutation_load = False
         self.hot_spots = 0
+        self.drugs_dict = {}
         logger.debug("added sample %s", patient_barcode)
         
     def add_mutation(self,hugo_symbol, mutation_type, mutation_pos):
@@ -171,6 +173,24 @@ class Sample(object):
                 return True
         else:
             return False
+            
+    def update_drug_data(self, drugs_dict):
+        self.drugs_dict = drugs_dict
+        
+    def sort_drugs_chronologically(self):
+        self.drugs_list_sorted = [[]] * len(self.drugs_dict)
+        counter = 0
+        for drug_dict in self.drugs_dict.values():
+            if drug_dict['regimen_number'] and drug_dict['regimen_number'].isdigit():
+                index = int(drug_dict['regimen_number']) - 1
+                self.drugs_list_sorted[index].append(drug_dict)
+                if index > counter:
+                    counter = index+1
+        self.drugs_list_sorted = self.drugs_list_sorted[:counter]
+                
+    def get_last_drug_name(self):
+        self.sort_drugs_chronologically()
+        return [i.get('drug_name', 'None') for i in self.drugs_list_sorted[-1]]
 
         
 class Mutation(object):
@@ -279,13 +299,28 @@ class MutationsSummary(object):
         update_date = datetime.date(update_year, update_month, update_day)
         sample = self.ids_dict.get(patient_barcode, None)
         if sample:
+            drugs = tree.findall('.//{http://tcga.nci/bcr/xml/clinical/pharmaceutical/2.7}drug')
+            drugs_dict = {}
+            for drug in drugs:
+                drug_name = drug.findtext('.//{http://tcga.nci/bcr/xml/clinical/pharmaceutical/2.7}drug_name') 
+                drugs_dict[drug_name] = {}
+                for child in list(drug):
+                    key = child.tag.split("}")[-1]
+                    value = child.text
+                    if list(child):
+                        value = []
+                        for mini_child in list(child):
+                            value.append((child, child.text))
+                    elif value:
+                        value = value.strip()
+                    drugs_dict[drug_name][key] = value
+            sample.update_drug_data(drugs_dict)
             if days_to_last_followup:
                 logger.debug("updating patient %s survival according to days_to_last_followup", patient_barcode)
                 sample.update_survival(days_to_last_followup, update_date)
             else:
                 logger.debug("updating patient %s survival according to days_to_death", patient_barcode)
                 sample.update_survival(days_to_death, update_date, True)
-        
                 
     def write_output(self, output_path, cancer, mutation_type):
         logger.info("writing output file %s", output_path)
@@ -463,36 +498,36 @@ class MutationsSummary(object):
         groups = ('BRCA1', 'BRCA2', 'HR', 'NER', 'MMR')
         T = df['days']
         C = df['dead']
-        kmf = ll.KaplanMeierFitter()
-        for i, group in enumerate(groups):            
-            ax = plt.subplot(2,3,i+1)
-            ix = (df[group] == True)
-            if len(df[ix]) and len(df[~ix]):
-                kmf.fit(T[~ix], C[~ix], label='%s_proficient' % group)
-                kmf.plot(ax=ax)
-                kmf.fit(T[ix], C[ix], label='%s_deficient' % group)
-                kmf.plot(ax=ax, legend=True)
-                ax.set_title('%s survival - %s'% (group, cancer))
-            else:
-                logger.info("cancer %s has no %s deficient", cancer, group)
-#            print group
-#            print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.95)
-        plt.tight_layout()
-        kmf1 = plt.gcf()
-        pyplot(kmf1, output_path + '%s.html' % cancer, ci=False)
-            
-        kmf = ll.KaplanMeierFitter()
-        groups = ('BRCA1_MUTATED', 'BRCA2_MUTATED', 'HR_DEFICIENT', 'NER_DEFICIENT', 'MMR_DEFICIENT','HR_PROFIECIENT')
-        ax = plt.subplot(111)
-        for group in groups:
-            ix = (df['group'] == group)
-            if len(df[ix]) and len(df[~ix]):
-                kmf.fit(T[ix], C[ix], label=group)
-                kmf.survival_function_.plot(ax=ax)
-            #kmf.survival_function_.plot()
-        plt.title("survival by groups - %s" % cancer)
-        kmf2 = plt.gcf()
-        pyplot(kmf2, output_path + '.%s.groups_compare.html'% cancer, ci=False)
+#        kmf = ll.KaplanMeierFitter()
+#        for i, group in enumerate(groups):            
+#            ax = plt.subplot(2,3,i+1)
+#            ix = (df[group] == True)
+#            if len(df[ix]) and len(df[~ix]):
+#                kmf.fit(T[~ix], C[~ix], label='%s_proficient' % group)
+#                kmf.plot(ax=ax)
+#                kmf.fit(T[ix], C[ix], label='%s_deficient' % group)
+#                kmf.plot(ax=ax, legend=True)
+#                ax.set_title('%s survival - %s'% (group, cancer))
+#            else:
+#                logger.info("cancer %s has no %s deficient", cancer, group)
+##            print group
+##            print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.95)
+#        plt.tight_layout()
+#        kmf1 = plt.gcf()
+#        pyplot(kmf1, output_path + '%s.html' % cancer, ci=False)
+#            
+#        kmf = ll.KaplanMeierFitter()
+#        groups = ('BRCA1_MUTATED', 'BRCA2_MUTATED', 'HR_DEFICIENT', 'NER_DEFICIENT', 'MMR_DEFICIENT','HR_PROFIECIENT')
+#        ax = plt.subplot(111)
+#        for group in groups:
+#            ix = (df['group'] == group)
+#            if len(df[ix]) and len(df[~ix]):
+#                kmf.fit(T[ix], C[ix], label=group)
+#                kmf.survival_function_.plot(ax=ax)
+#            #kmf.survival_function_.plot()
+#        plt.title("survival by groups - %s" % cancer)
+#        kmf2 = plt.gcf()
+#        pyplot(kmf2, output_path + '.%s.groups_compare.html'% cancer, ci=False)
     
             
         kmf = ll.KaplanMeierFitter()
@@ -566,7 +601,8 @@ class MutationsSummary(object):
         samples_list = sorted(self.ids_dict.keys())
         mutation_list = sorted(self.mutations_dict.keys())
         self.samples_mutations_dataframe = pd.DataFrame()
-        for mutation in tqdm(mutation_list):
+#        for mutation in tqdm(mutation_list):
+        for mutation in mutation_list:
             mutation_samples = []
             for sample_id in samples_list:
                 sample = self.ids_dict[sample_id]
@@ -608,18 +644,44 @@ class MutationsSummary(object):
                                      'non_top_avg_ratio' : self.samples_mutations_ratio_dataframe[mutation][~top_mutation_load].sum()/len(self.samples_mutations_ratio_dataframe[mutation][~top_mutation_load])})
         
     def create_mutations_overload_pvalue_csv(self, output_path):
+        Entrez.email = 'galynz@gmail.com'
         with open(output_path, 'wb') as f:
             csv_writer = csv.DictWriter(f, ['Hugo_symbol', 't-test_p-value',
                                             'ks-test_p-value',
                                             'deficient_num', 'proficient_num', 
                                             'deficient_mean', 'proficient_mean',
                                             'deficient_median', 'proficient_median',
-                                            'deficient_std', 'proficient_std'])
+                                            'deficient_std', 'proficient_std',
+                                            'size', 'description'])
             csv_writer.writeheader()
-            for mutation in tqdm(self.samples_mutations_dataframe.columns[:-3]):
+#            for mutation in tqdm(self.samples_mutations_dataframe.columns[:-3]):
+            for mutation in self.samples_mutations_dataframe.columns[:-3]:
                 ix = self.samples_mutations_dataframe[mutation] > 0
                 deficient = self.samples_mutations_dataframe[ix]['mutations_num']
                 proficient = self.samples_mutations_dataframe[~ix]['mutations_num']
+                
+                #get gene info
+                try:
+                    handle = Entrez.esearch("gene", term="%s[Gene] AND Human[Orgn]" % mutation)
+                    result = Entrez.read(handle)
+                    mut_id = result['IdList'][0]
+                    request = Entrez.epost('gene', id=mut_id)
+                    result = Entrez.read(request)
+                    webEnv = result["WebEnv"]
+                    queryKey = result["QueryKey"]
+                    data = Entrez.esummary(db="gene", webenv=webEnv, query_key = queryKey)
+                    annotations = Entrez.read(data)
+    
+                    start = int(annotations['DocumentSummarySet']['DocumentSummary'][0]['GenomicInfo'][0]['ChrStart'])
+                    end = int(annotations['DocumentSummarySet']['DocumentSummary'][0]['GenomicInfo'][0]['ChrStop'])                
+                    size = abs(start-end)
+                    desc = annotations['DocumentSummarySet']['DocumentSummary'][0]['Description']
+                except Exception, e:
+                    logger.exception(e)
+                    logger.error("can't get info for Hugo symbol %s", mutation)
+                    size = 'Failed'
+                    desc = 'Failed'
+                
                 if len(deficient) > 20:
                     csv_writer.writerow({'Hugo_symbol' : mutation,
                                          't-test_p-value' : tls.scipy.stats.ttest_ind(deficient, proficient, equal_var=False).pvalue,
@@ -631,7 +693,8 @@ class MutationsSummary(object):
                                          'deficient_median' : tls.scipy.median(deficient),
                                          'proficient_median' : tls.scipy.median(proficient),
                                          'deficient_std' : tls.scipy.std(deficient),
-                                         'proficient_std' : tls.scipy.std(proficient)})
+                                         'proficient_std' : tls.scipy.std(proficient),
+                                         'size' : size, 'description' : desc})
 
 def pyplot(fig, output_path, ci=False, legend=True):
     # Convert mpl fig obj to plotly fig obj, resize to plotly's default
@@ -707,8 +770,8 @@ def main():
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
     summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
     summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
-    summary.create_samples_mutations_dataframe(mutation_types)
-    summary.create_mutations_overload_pvalue_csv('%s.mutation_load_per_mutation.csv' % options.output_path)
+#    summary.create_samples_mutations_dataframe(mutation_types)
+#    summary.create_mutations_overload_pvalue_csv('%s.mutation_load_per_mutation.csv' % options.output_path)
     
 #if __name__ == "__main__":
 #    main()

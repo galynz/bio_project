@@ -495,7 +495,7 @@ class MutationsSummary(object):
         self.find_high_low_mutation_load_patients()
         l = [(i.patient_barcode, int(i.survival_days), i.dead, i.get_group(), i.check_group_deficient('brca1', mutation_type), i.check_group_deficient('brca2', mutation_type), i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load) for i in self.ids_dict.values() if i.clinical_available]
         df = pd.DataFrame(data=l, columns=["patient_barcode", "days", "dead", "group", 'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load'])
-        groups = ('BRCA1', 'BRCA2', 'HR', 'NER', 'MMR')
+#        groups = ('BRCA1', 'BRCA2', 'HR', 'NER', 'MMR')
         T = df['days']
         C = df['dead']
 #        kmf = ll.KaplanMeierFitter()
@@ -545,8 +545,11 @@ class MutationsSummary(object):
         pyplot(kmf3, output_path + '.top_low_mutation_load_patietns.%s.html' % (cancer), ci=False)
         print "cancer:", cancer
         print 'top/low mutation load patients'
-        print logrank_test(T[ix], T[ix2], C[ix], C[ix2], alpha=0.95)
+        print logrank_test(T[ix], T[ix2], C[ix], C[ix2], alpha=0.99)
         print 'top:', len(T[ix]), 'low:', len(T[ix2])
+        print 'top/non-top mutation load patients'
+        print logrank_test(T[ix], T[~ix], C[ix], C[~ix], alpha=0.99)
+        print 'top:', len(T[ix]), 'non-top:', len(T[~ix])
         
         
     def plot_hot_spot_box(self, output_path, cancer, plot_type='box', mutation_type=[]):

@@ -474,7 +474,10 @@ class MutationsSummary(object):
         for group in groups:
 #            print group, len(count_dict[group]['deficient'])
             pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient'], equal_var=False).pvalue
-            ks_pvalue = tls.scipy.stats.ks_2samp(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            if len(count_dict[group]['deficient']):
+                ks_pvalue = tls.scipy.stats.ks_2samp(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            else:
+                ks_pvalue = 1
             x_deficient.extend(['%s<br>t_test-pvalue=%s<br>ks-pvalue=%s' % (group, pvalue, ks_pvalue)] * len(count_dict[group]['deficient']))
             y_deficient.extend(count_dict[group]['deficient'])
             x_proficient.extend(['%s<br>t_test-pvalue=%s<br>ks-pvalue=%s' % (group, pvalue, ks_pvalue)] * len(count_dict[group]['proficient']))
@@ -575,7 +578,10 @@ class MutationsSummary(object):
         
         for group in groups:
             pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient'], equal_var=False).pvalue
-            ks_pvalue = tls.scipy.stats.ks_2samp(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            if len(count_dict[group]['deficient']):
+                ks_pvalue = tls.scipy.stats.ks_2samp(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
+            else:
+                ks_pvalue = 1
             x_deficient.extend(['%s<br>t_test-pvalue=%s<br>ks-pvalue=%s' % (group, pvalue, ks_pvalue)] * len(count_dict[group]['deficient']))
             y_deficient.extend(count_dict[group]['deficient'])
             x_proficient.extend(['%s<br>t_test-pvalue=%s<br>ks-pvalue=%s' % (group, pvalue, ks_pvalue)] * len(count_dict[group]['proficient']))

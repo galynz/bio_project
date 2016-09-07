@@ -74,6 +74,8 @@ class Sample(object):
         self.drugs_dict = {}
         self.new_tumor_event = False
         self.days_to_new_tumor = None
+        self.age = None
+        self.gender = None
         logger.debug("added sample %s", patient_barcode)
         
     def add_mutation(self,hugo_symbol, mutation_type, mutation_pos):
@@ -200,6 +202,12 @@ class Sample(object):
     def set_days_to_new_tumor(self, days):
         self.new_tumor_event = True
         self.days_to_new_tumor = days
+        
+    def set_age(self, age):
+        self.age = age
+        
+    def set_gender(self, gender):
+        self.gender = gender
 
         
 class Mutation(object):
@@ -308,6 +316,8 @@ class MutationsSummary(object):
         update_date = datetime.date(update_year, update_month, update_day)
         sample = self.ids_dict.get(patient_barcode, None)
         days_to_new_tumor = tree.findtext(".//{http://tcga.nci/bcr/xml/clinical/shared/new_tumor_event/2.7}days_to_new_tumor_event_after_initial_treatment")
+        age = tree.findtext('.//{http://tcga.nci/bcr/xml/clinical/shared/2.7}age_at_initial_pathologic_diagnosis')
+        gender = tree.findtext('//{http://tcga.nci/bcr/xml/shared/2.7}gender')
         if sample:
             drugs = tree.findall('.//{http://tcga.nci/bcr/xml/clinical/pharmaceutical/2.7}drug')
             drugs_dict = {}
@@ -333,6 +343,29 @@ class MutationsSummary(object):
                 sample.update_survival(days_to_death, update_date, True)
             if days_to_new_tumor and days_to_new_tumor.isdigit():
                 sample.set_days_to_new_tumor(int(days_to_new_tumor))
+            if age:
+                sample.set_age(int(age))
+            if gender:
+                if gender.lower() == 'female':
+                    sample.set_gender(1)
+                else:
+                    sample.set_gender(0)
+                
+    def create_survival_df(self, mutation_type):
+        self.find_high_low_mutation_load_patients(mutation_type)        
+        l = []
+        for i in self.ids_dict.values():
+            if not i.clinical_available:
+                pass
+            mutation_load_group = 2
+            if i.top_mutation_load:
+                mutation_load_group = 0
+            elif i.low_mutation_load:
+                mutation_load_group = 1
+            data = (int(i.survival_days), i.dead, i.check_group_deficient('brca1', mutation_type), i.check_group_deficient('brca2', mutation_type), i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, mutation_load_group, i.age, i.gender, i.count_mutations(False, mutation_type))
+            l.append(data)
+        self.survival_df = pd.DataFrame(data=l, columns=["days", "dead",  'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load'])
+        
                 
                 
     def write_output(self, output_path, cancer, mutation_type):

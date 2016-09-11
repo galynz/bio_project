@@ -504,7 +504,7 @@ class MutationsSummary(object):
         for group in groups:
             count_dict[group] = {'deficient' : [], 'proficient' : []}
         for sample in self.ids_dict.values():
-            count = sample.count_mutations(distinct, mutation_type)
+            count = sample.count_mutations(distinct, mutation_type)/30.0 #count per megabase (assuming the avg exome length is 30mbp)
             for group in groups:
                 if sample.check_group_deficient(group, mutation_type):
                     count_dict[group]['deficient'].append(count)                        

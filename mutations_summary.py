@@ -76,6 +76,7 @@ class Sample(object):
         self.days_to_new_tumor = None
         self.age = None
         self.gender = None
+        self.special_group = None #used in cancer with sub groups, like triple negative in breast
         logger.debug("added sample %s", patient_barcode)
         
     def add_mutation(self,hugo_symbol, mutation_type, mutation_pos):
@@ -208,6 +209,12 @@ class Sample(object):
         
     def set_gender(self, gender):
         self.gender = gender
+        
+    def set_special_group(self, special_group):
+        self.special_group = special_group
+        
+    def get_special_group(self):
+        return self.special_group
 
         
 class Mutation(object):
@@ -263,14 +270,15 @@ class Mutation(object):
         return float(self.count_non_top_mutation_load(distinct,mutation_type))/mutations_num                 
     
 class MutationsSummary(object):
-    def __init__(self, csv_paths, clinical_paths):
+    def __init__(self, csv_paths, clinical_paths, cancer):
         self.ids_dict = {}
         self.mutations_dict = {}
+        self.cancer = cancer
         for path in csv_paths:
             self.add_csv_data(path)
             logger.info("added %s to csv files", path)
         for path in clinical_paths:            
-            self.add_clinical_data(path)
+            self.add_clinical_data(path, self.cancer)
             logger.info("added %s to clinical files", path)
         
     def add_csv_data(self, path):
@@ -305,7 +313,7 @@ class MutationsSummary(object):
                 mutation_obj = self.mutations_dict.setdefault(mutation, Mutation(mutation))
                 mutation_obj.add_sample(sample)
                 
-    def add_clinical_data(self, path):
+    def add_clinical_data(self, path, cancer):
         tree = ET.parse(path)
         patient_barcode = tree.findtext(".//{http://tcga.nci/bcr/xml/shared/2.7}bcr_patient_barcode")
         days_to_last_followup = tree.findtext(".//{http://tcga.nci/bcr/xml/clinical/shared/2.7}days_to_last_followup")
@@ -350,6 +358,22 @@ class MutationsSummary(object):
                     sample.set_gender(1)
                 else:
                     sample.set_gender(0)
+                    
+            #Breast groups
+            if cancer == 'Breast_Invasive_Carcinoma':
+                pr_status = tree.findtext('.//{http://tcga.nci/bcr/xml/clinical/brca/shared/2.7}breast_carcinoma_progesterone_receptor_status')
+                er_status = tree.findtext('.//{http://tcga.nci/bcr/xml/clinical/brca/shared/2.7}breast_carcinoma_estrogen_receptor_status')
+                her2_status = tree.findtext('.//{http://tcga.nci/bcr/xml/clinical/brca/shared/2.7}lab_proc_her2_neu_immunohistochemistry_receptor_status')
+                if (pr_status,er_status,her2_status) == ('Positive','Positive','Negative'):
+                    sample.set_special_group('Luminal-A')
+                elif (pr_status,er_status,her2_status) == ('Positive','Positive','Positive'):
+                    sample.set_special_group('Luminal-B')
+                elif (pr_status,er_status,her2_status) == ('Negative','Negative','Positive'):
+                    sample.set_special_group('PR-ER-HER2+')
+                elif (pr_status,er_status,her2_status) == ('Negative','Negative','Negative'):
+                    sample.set_special_group('Triple-Negative')
+                else:
+                    sample.set_special_group('other')
                 
     def create_survival_df(self, mutation_type):
         self.find_high_low_mutation_load_patients(mutation_type)        
@@ -373,11 +397,11 @@ class MutationsSummary(object):
         with open(output_path, "wb") as f:
             csv_file = csv.DictWriter(f, fieldnames=["Tumor_Sample_Barcode",
                                                      "Matched_Norm_Sample_Barcode", 
-                                                     "Group", "Mutations_Count", 
+                                                     "Group", "Mutations_Count_per_megabase", 
                                                      "Mutations_Count_distinct",
                                                      "Cancer_Site", "Survival_days",
                                                      "BRCA1_mutated", "BRCA2_mutated",
-                                                     "HR_mutated", "NER_mutated", "MMR_mutated"])
+                                                     "HR_mutated", "NER_mutated", "MMR_mutated", "Special_group"])
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()
@@ -385,7 +409,7 @@ class MutationsSummary(object):
                     row_dict = {"Tumor_Sample_Barcode" : sample.tumor_barcode,
                                 "Matched_Norm_Sample_Barcode" : sample.norm_barcode,
                                 "Group" :  group,
-                                "Mutations_Count" : sample.count_mutations(False, mutation_type),
+                                "Mutations_Count_per_megabase" : sample.count_mutations(False, mutation_type)/30.0,
                                 "Mutations_Count_distinct" : sample.count_mutations(mutation_type=mutation_type),
                                 "Cancer_Site" : cancer,
                                 "Survival_days" : sample.survival_days,
@@ -393,12 +417,13 @@ class MutationsSummary(object):
                                 "BRCA2_mutated" : sum([sample.brca2.get(i, 0) for i in mutation_type]),
                                 "HR_mutated" : sum([sample.hr_deficient.get(i, 0) for i in mutation_type]),
                                 "NER_mutated" : sum([sample.ner_deficient.get(i, 0) for i in mutation_type]),
-                                "MMR_mutated" : sum([sample.mmr_deficient.get(i, 0) for i in mutation_type])}
+                                "MMR_mutated" : sum([sample.mmr_deficient.get(i, 0) for i in mutation_type]),
+                                "Special_group" : sample.special_group}
                 else:
                     row_dict = {"Tumor_Sample_Barcode" : sample.tumor_barcode,
                                 "Matched_Norm_Sample_Barcode" : sample.norm_barcode,
                                 "Group" :  group,
-                                "Mutations_Count" : sample.count_mutations(False, mutation_type),
+                                "Mutations_Count_per_megabase" : sample.count_mutations(False, mutation_type)/30.0,
                                 "Mutations_Count_distinct" : sample.count_mutations(mutation_type=mutation_type),
                                 "Cancer_Site" : cancer,
                                 "Survival_days" : sample.survival_days,
@@ -406,7 +431,8 @@ class MutationsSummary(object):
                                 "BRCA2_mutated" : sum(sample.brca2.values()),
                                 "HR_mutated" : sum(sample.hr_deficient.values()),
                                 "NER_mutated" : sum(sample.ner_deficient.values()),
-                                "MMR_mutated" : sum(sample.mmr_deficient.values())}
+                                "MMR_mutated" : sum(sample.mmr_deficient.values()),
+                                "Special_group" : sample.special_group}
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer, mutation_type):
@@ -497,13 +523,15 @@ class MutationsSummary(object):
 #                for days,count in enumerate(group_list):
 #                    csv_file.writerow({"Days" : days, "Group" : group, "Num" : count, "Cancer" : cancer, "percent out of group" : count/group_count[group]})
                     
-    def plot_mutation_load_box(self, output_path, cancer, distinct, mutation_type):
+    def plot_mutation_load_box(self, output_path, cancer, distinct, mutation_type, special_group=None):
         logger.info("plotting mutation load box plots and saving it to %s", output_path)
         count_dict ={}
         groups = ('brca1', 'brca2', 'hr_deficient', 'ner_deficient', 'mmr_deficient')
         for group in groups:
             count_dict[group] = {'deficient' : [], 'proficient' : []}
         for sample in self.ids_dict.values():
+            if sample.get_special_group() != special_group: #adding only samples from the right special group (if there is no special group, the value will be none and all the samples will be considered)
+                continue
             count = sample.count_mutations(distinct, mutation_type)/30.0 #count per megabase (assuming the avg exome length is 30mbp)
             for group in groups:
                 if sample.check_group_deficient(group, mutation_type):
@@ -534,7 +562,11 @@ class MutationsSummary(object):
                            name='proficient', marker=dict(color='#FF4136'))
         data = [deficient, proficient]
         
-        layout = go.Layout(yaxis=dict(title='%s mutation load by group (deficient/proficient)'% cancer,
+        if special_group:
+            name = '%s - %s' % (cancer, special_group)
+        else:
+            name = cancer
+        layout = go.Layout(yaxis=dict(title='%s mutation load by group (deficient/proficient)'% name,
                                       zeroline=False),
                             boxmode='group')
         fig = go.Figure(data=data, layout=layout)
@@ -847,13 +879,17 @@ def main():
         mutation_types = options.mutation_types.split(",")
     else:
         mutation_types = []
-    summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths)
+    summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths, options.cancer)
     summary.write_mutation_load_output("%s.mutation_load.csv" % options.output_path, options.cancer, mutation_types)
     summary.write_output("%s.patients_summary.csv" % options.output_path, options.cancer, mutation_types)
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
     summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
     summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
+    
+    if options.cancer == 'Breast_Invasive_Carcinoma':
+        for special_group in ('Luminal-A', 'Luminal-B', 'PR-ER-HER2+', 'Triple-Negative', 'other'):
+            summary.plot_mutation_load_box("%s.%s.mutation_load" % (options.output_path, special_group), options.cancer, False, mutation_types, special_group)
 #    summary.create_samples_mutations_dataframe(mutation_types)
 #    summary.create_mutations_overload_pvalue_csv('%s.mutation_load_per_mutation.csv' % options.output_path)
     

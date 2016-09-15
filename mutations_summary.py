@@ -325,7 +325,7 @@ class MutationsSummary(object):
         sample = self.ids_dict.get(patient_barcode, None)
         days_to_new_tumor = tree.findtext(".//{http://tcga.nci/bcr/xml/clinical/shared/new_tumor_event/2.7}days_to_new_tumor_event_after_initial_treatment")
         age = tree.findtext('.//{http://tcga.nci/bcr/xml/clinical/shared/2.7}age_at_initial_pathologic_diagnosis')
-        gender = tree.findtext('//{http://tcga.nci/bcr/xml/shared/2.7}gender')
+        gender = tree.findtext('.//{http://tcga.nci/bcr/xml/shared/2.7}gender')
         if sample:
             drugs = tree.findall('.//{http://tcga.nci/bcr/xml/clinical/pharmaceutical/2.7}drug')
             drugs_dict = {}
@@ -530,7 +530,7 @@ class MutationsSummary(object):
         for group in groups:
             count_dict[group] = {'deficient' : [], 'proficient' : []}
         for sample in self.ids_dict.values():
-            if sample.get_special_group() != special_group: #adding only samples from the right special group (if there is no special group, the value will be none and all the samples will be considered)
+            if special_group and sample.get_special_group() != special_group: #adding only samples from the right special group (if there is no special group, the value will be none and all the samples will be considered)
                 continue
             count = sample.count_mutations(distinct, mutation_type)/30.0 #count per megabase (assuming the avg exome length is 30mbp)
             for group in groups:

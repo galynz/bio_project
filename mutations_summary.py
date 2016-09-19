@@ -29,6 +29,7 @@ import plotly.plotly as py
 import plotly.tools as tls   
 from plotly.graph_objs import *
 from lifelines.statistics import logrank_test
+from statsmodels.formula.api import ols
 
 from pylab import rcParams
 rcParams['figure.figsize']=10, 5
@@ -76,6 +77,7 @@ class Sample(object):
         self.days_to_new_tumor = None
         self.age = None
         self.gender = None
+        self.stage = None
         self.special_group = None #used in cancer with sub groups, like triple negative in breast
         logger.debug("added sample %s", patient_barcode)
         
@@ -165,7 +167,10 @@ class Sample(object):
         has_mutation = getattr(self, group)                
         if has_mutation:                    
             if mutation_type:
-            # making sure that the mutation is of type we want to consider
+                if mutation_type == 'Silent':
+                    # Skipping silent mutations, because they don't cause deficiency
+                    continue
+            # making sure that the mutation is of types we want to consider
                 has_mutation_type = False
                 for mut_type in mutation_type:
                     if has_mutation.has_key(mut_type):
@@ -215,6 +220,9 @@ class Sample(object):
         
     def get_special_group(self):
         return self.special_group
+        
+    def set_stage(self, stage):
+        self.stage = stage
 
         
 class Mutation(object):
@@ -322,6 +330,7 @@ class MutationsSummary(object):
         update_month = int(tree.findtext(".//{http://tcga.nci/bcr/xml/administration/2.7}month_of_dcc_upload"))
         update_year = int(tree.findtext(".//{http://tcga.nci/bcr/xml/administration/2.7}year_of_dcc_upload"))
         update_date = datetime.date(update_year, update_month, update_day)
+        stage = tree.findtext('.//{http://tcga.nci/bcr/xml/clinical/shared/stage/2.7}pathologic_stage')
         sample = self.ids_dict.get(patient_barcode, None)
         days_to_new_tumor = tree.findtext(".//{http://tcga.nci/bcr/xml/clinical/shared/new_tumor_event/2.7}days_to_new_tumor_event_after_initial_treatment")
         age = tree.findtext('.//{http://tcga.nci/bcr/xml/clinical/shared/2.7}age_at_initial_pathologic_diagnosis')
@@ -358,6 +367,8 @@ class MutationsSummary(object):
                     sample.set_gender(1)
                 else:
                     sample.set_gender(0)
+            if stage:
+                sample.set_stage(stage)
                     
             #Breast groups
             if cancer == 'Breast_Invasive_Carcinoma':
@@ -386,9 +397,9 @@ class MutationsSummary(object):
                 mutation_load_group = 0
             elif i.low_mutation_load:
                 mutation_load_group = 1
-            data = (int(i.survival_days), i.dead, i.check_group_deficient('brca1', mutation_type), i.check_group_deficient('brca2', mutation_type), i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, mutation_load_group, i.age, i.gender, i.count_mutations(False, mutation_type))
+            data = (int(i.survival_days), i.dead, i.check_group_deficient('brca1', mutation_type), i.check_group_deficient('brca2', mutation_type), i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, mutation_load_group, i.age, i.gender, i.count_mutations(False, mutation_type), i.stage, i.get_special_group(), sum([i.hr_deficient.get(j, 0) for j in mutation_type]),)
             l.append(data)
-        self.survival_df = pd.DataFrame(data=l, columns=["days", "dead",  'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load'])
+        self.survival_df = pd.DataFrame(data=l, columns=["days", "dead",  'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count"])
         
                 
                 
@@ -401,7 +412,8 @@ class MutationsSummary(object):
                                                      "Mutations_Count_distinct",
                                                      "Cancer_Site", "Survival_days",
                                                      "BRCA1_mutated", "BRCA2_mutated",
-                                                     "HR_mutated", "NER_mutated", "MMR_mutated", "Special_group"])
+                                                     "HR_mutated", "NER_mutated", "MMR_mutated", "Special_group",
+                                                     "Age", "Gender", "Stage"])
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()
@@ -433,6 +445,9 @@ class MutationsSummary(object):
                                 "NER_mutated" : sum(sample.ner_deficient.values()),
                                 "MMR_mutated" : sum(sample.mmr_deficient.values()),
                                 "Special_group" : sample.special_group}
+                row_dict["Age"] = sample.age
+                row_dict["Gender"] = sample.gender
+                row_dict["Stage"] = sample.stage
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer, mutation_type):

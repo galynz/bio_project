@@ -167,12 +167,12 @@ class Sample(object):
         has_mutation = getattr(self, group)                
         if has_mutation:                    
             if mutation_type:
-                if mutation_type == 'Silent':
-                    # Skipping silent mutations, because they don't cause deficiency
-                    continue
             # making sure that the mutation is of types we want to consider
                 has_mutation_type = False
                 for mut_type in mutation_type:
+                    if mutation_type == 'Silent':
+                        # Skipping silent mutations, because they don't cause deficiency
+                        continue
                     if has_mutation.has_key(mut_type):
                         has_mutation_type = True
                         break
@@ -413,7 +413,7 @@ class MutationsSummary(object):
                                                      "Cancer_Site", "Survival_days",
                                                      "BRCA1_mutated", "BRCA2_mutated",
                                                      "HR_mutated", "NER_mutated", "MMR_mutated", "Special_group",
-                                                     "Age", "Gender", "Stage"])
+                                                     "Age", "Gender", "Stage"] + list (HR_DEFICIENT_GENES))
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()
@@ -448,6 +448,9 @@ class MutationsSummary(object):
                 row_dict["Age"] = sample.age
                 row_dict["Gender"] = sample.gender
                 row_dict["Stage"] = sample.stage
+                for gene in HR_DEFICIENT_GENES:
+                    if sample.get_gene_mutations(gene, False, mutation_type):
+                        row_dict[gene] = True
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer, mutation_type):
@@ -485,7 +488,7 @@ class MutationsSummary(object):
             non_top_patients_mutations_sum = patients_mutations_sum - top_patients_mutations_sum
             for mut in self.mutations_dict.values():
                 row_dict = {"Hugo_code": mut.hugo_code,
-                           "samples_count_distinct" : mut.count_all_mutation_load(),
+                           "samples_count_distinct" : mut.count_all_mutation_load(mutation_type=mutation_type),
                            "top_mutation_load_samples_count_distinct" : mut.count_top_mutation_load(mutation_type=mutation_type),
                            "low_mutation_load_samples_count_distinct" : mut.count_low_mutation_load(mutation_type=mutation_type),
                            "top_mutation_load_patients_ratio_distinct" : mut.calc_top_mutation_load_patients_ratio(top_mutation_load_num,mutation_type=mutation_type),

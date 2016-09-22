@@ -476,6 +476,8 @@ class MutationsSummary(object):
                 for gene in HR_DEFICIENT_GENES:
                     if sample.get_gene_mutations(gene, False, mutation_type):
                         row_dict[gene] = True
+                    else:
+                        row_dict[gene] = False
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer, mutation_type):

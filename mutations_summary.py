@@ -81,6 +81,31 @@ class Sample(object):
         self.special_group = None #used in cancer with sub groups, like triple negative in breast
         logger.debug("added sample %s", patient_barcode)
         
+#    def add_mutation(self,hugo_symbol, mutation_type, mutation_pos):
+#        self.mutations.setdefault(mutation_type, {}).setdefault(hugo_symbol, set())
+#        add = True
+#        if not self.mutations[mutation_type][hugo_symbol].intersection(set(mutation_pos)):
+#            for mut in self.mutations[mutation_type][hugo_symbol]:
+#                if mut[1] == mutation_pos[0] or mut[0] == mutation_pos[0] + 1 or mut[0] == mutation_pos[1] or mut[0] == mutation_pos[1] + 1:
+#                    logger.info("marged lines: %s,%s,%s,%s,%s", hugo_symbol, mutation_type, mutation_pos, mut, self.tumor_barcode)
+#                    mut = (min(mut[0], mutation_pos[0]), max(mut[1], mutation_pos[1]))
+#                    add = False
+#            if add:
+#                self.mutations[mutation_type][hugo_symbol].add(mutation_pos)
+#                count = sum([len(i.get(hugo_symbol, set())) for i in self.mutations.values()])
+#                if count == HOT_SPOT_TRESHOLD:
+#                    self.hot_spots+=1
+#                if hugo_symbol == "BRCA1":
+#                    self.brca1[mutation_type] = self.brca1.get(mutation_type, 0) + 1
+#                if hugo_symbol == "BRCA2":
+#                    self.brca2[mutation_type] = self.brca2.get(mutation_type, 0) + 1
+#                if hugo_symbol in HR_DEFICIENT_GENES:
+#                    self.hr_deficient[mutation_type] = self.hr_deficient.get(mutation_type, 0) + 1
+#                if hugo_symbol in NER_DEFICIENT_GENES:
+#                    self.ner_deficient[mutation_type] = self.ner_deficient.get(mutation_type, 0) + 1
+#                if hugo_symbol in MMR_DEFICIENT_GENES:
+#                    self.mmr_deficient[mutation_type] = self.mmr_deficient.get(mutation_type, 0) + 1
+         
     def add_mutation(self,hugo_symbol, mutation_type, mutation_pos):
         self.mutations.setdefault(mutation_type, {}).setdefault(hugo_symbol, set())
         if not self.mutations[mutation_type][hugo_symbol].intersection(set(mutation_pos)):
@@ -98,7 +123,7 @@ class Sample(object):
                 self.ner_deficient[mutation_type] = self.ner_deficient.get(mutation_type, 0) + 1
             if hugo_symbol in MMR_DEFICIENT_GENES:
                 self.mmr_deficient[mutation_type] = self.mmr_deficient.get(mutation_type, 0) + 1
-        
+    
     def count_mutations(self, distinct=True, mutation_type=None):
         if distinct:
             if mutation_type:
@@ -312,7 +337,7 @@ class MutationsSummary(object):
                 patient_barcode = "-".join(tumor_barcode.split('-')[:3])
                 mutation = row["hugo_symbol"]
                 mutation_type = row["variant_classification"]
-                mutation_pos = row["start_position"]
+                mutation_pos = (int(row["start_position"]), int(row["end_position"]))
                 #center = row["Center"]
                 sample = self.ids_dict.setdefault(patient_barcode, Sample(patient_barcode, tumor_barcode, norm_barcode))
                 #sample.add_center(center)

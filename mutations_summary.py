@@ -37,7 +37,7 @@ rcParams['figure.figsize']=10, 5
 #init_notebook_mode()
 
 HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "BRCA1","BRCA2",
-                      "FANCD2", "FANCE", "FANCF","FANCG", "NBN", "PTEN", "U2AF1")
+                      "FANCD2", "FANCE", "FANCF","FANCG", "NBN", "PTEN", "U2AF1", "ATR")
 
 NER_DEFICIENT_GENES = ("CCNH", "CDK7", "CENT2",  "DDB1", "DDB2",
                        "ERCC1", "ERCC2","ERCC3", "ERCC4", "ERCC5", 
@@ -414,7 +414,7 @@ class MutationsSummary(object):
     def create_survival_df(self, mutation_type):
         self.find_high_low_mutation_load_patients(mutation_type)        
         l = []
-        for i in self.ids_dict.values():
+        for key, i in self.ids_dict.items():
             if not i.clinical_available:
                 pass
             mutation_load_group = 2
@@ -422,9 +422,11 @@ class MutationsSummary(object):
                 mutation_load_group = 0
             elif i.low_mutation_load:
                 mutation_load_group = 1
-            data = (int(i.survival_days), i.dead, i.check_group_deficient('brca1', mutation_type), i.check_group_deficient('brca2', mutation_type), i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, mutation_load_group, i.age, i.gender, i.count_mutations(False, mutation_type), i.stage, i.get_special_group(), sum([i.hr_deficient.get(j, 0) for j in mutation_type]),)
-            l.append(data)
-        self.survival_df = pd.DataFrame(data=l, columns=["days", "dead",  'BRCA1', 'BRCA2', 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count"])
+            data = [int(i.survival_days), i.dead, i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, mutation_load_group, i.age, i.gender, i.count_mutations(False, mutation_type), i.stage, i.get_special_group(), sum([i.hr_deficient.get(j, 0) for j in mutation_type]),key]
+            for gene in HR_DEFICIENT_GENES:
+                data.append(int(i.get_gene_mutations(gene, False, mutation_type)>0))
+            l.append(tuple(data))
+        self.survival_df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES))
         
                 
                 
@@ -856,6 +858,44 @@ class MutationsSummary(object):
                                          'deficient_std' : tls.scipy.std(deficient),
                                          'proficient_std' : tls.scipy.std(proficient),
                                          'size' : size, 'description' : desc})
+                                         
+    def plot_heatmap(self, mutation_type, output_dir):
+        stages = [None,
+                 'Stage I',
+                 'Stage IA',
+                 'Stage IB',
+                 'Stage II',
+                 'Stage IIA',
+                 'Stage IIB',
+                 'Stage III',
+                 'Stage IIIA',
+                 'Stage IIIB',
+                 'Stage IIIC',
+                 'Stage IV',
+                 'Stage X']
+        self.create_survival_df(mutation_type)
+        df = self.survival_df.sort_values("mutation_load")
+        heatmap_trace = go.Heatmap(z=[df[i] for i in HR_DEFICIENT_GENES], y=HR_DEFICIENT_GENES, x=df.sample_barcode)
+        mutation_load_trace = go.Bar(x=df.sample_barcode, y=df.mutation_load/30.0)
+        age_trace = go.Heatmap(x=df.sample_barcode, y=['age']*len(df), z=df.age)
+        gender_trace = go.Heatmap(x=df.sample_barcode, y=['gender']*len(df), z=df.gender)
+        stage_trace = go.Heatmap(x=df.sample_barcode, y=['stage']*len(df), z=df.stage.apply(lambda x: stages.index(x)))
+        dead_trace = go.Heatmap(x=df.sample_barcode, y=['dead']*len(df), z=df.dead.apply(int))
+        fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5}]] + [[None]] * 4 + [[{'rowspan' : 20}]] + [[None]] * 19 + [[{}]] * 4)
+        fig.append_trace(mutation_load_trace, 1, 1)
+        fig.append_trace(heatmap_trace, 6, 1)
+        fig.append_trace(age_trace, 26, 1)
+        fig.append_trace(gender_trace, 27, 1)
+        fig.append_trace(stage_trace, 28, 1)
+        fig.append_trace(dead_trace, 29, 1)
+        fig['layout']['xaxis1'].update(showticklabels = False)
+        fig['layout']['xaxis2'].update(showticklabels = False)
+        fig['layout']['xaxis3'].update(showticklabels = False)
+        fig['layout']['xaxis4'].update(showticklabels = False)
+        fig['layout']['xaxis5'].update(showticklabels = False)
+        fig['layout']['xaxis6'].update(showticklabels = False)
+        plot(fig, auto_open=False, filename=os.path.join(output_dir, "%s_heatmap.html" % self.cancer))
+        
 
 def pyplot(fig, output_path, ci=False, legend=True):
     # Convert mpl fig obj to plotly fig obj, resize to plotly's default

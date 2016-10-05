@@ -873,6 +873,7 @@ class MutationsSummary(object):
                  'Stage II',
                  'Stage IIA',
                  'Stage IIB',
+                 'Stage IIC',
                  'Stage III',
                  'Stage IIIA',
                  'Stage IIIB',

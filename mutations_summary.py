@@ -889,7 +889,7 @@ class MutationsSummary(object):
         mutation_load_trace = go.Bar(x=df.sample_barcode, y=df.mutation_load/30.0)
         age_trace = go.Heatmap(x=df.sample_barcode, y=['age']*len(df), z=df.age, showscale=False)
         gender_trace = go.Heatmap(x=df.sample_barcode, y=['gender']*len(df), z=df.gender, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
-        stage_trace = go.Heatmap(x=df.sample_barcode, y=['stage']*len(df), z=df.stage.apply(lambda x: stages.index(x)), showscale=False)
+        stage_trace = go.Heatmap(x=df.sample_barcode, y=['stage']*len(df), z=df.stage.apply(lambda x: stages.index(x) if x in stages else len(stages)), showscale=False)
         dead_trace = go.Heatmap(x=df.sample_barcode, y=['dead']*len(df), z=df.dead.apply(int), showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
         fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5}]] + [[None]] * 4 + [[{'rowspan' : 20}]] + [[None]] * 19 + [[{}]] * 4)
         fig.append_trace(mutation_load_trace, 1, 1)

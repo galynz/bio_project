@@ -878,6 +878,9 @@ class MutationsSummary(object):
                  'Stage IIIB',
                  'Stage IIIC',
                  'Stage IV',
+                 'Stage IVA',
+                 'Stage IVB',
+                 'Stage IVC',
                  'Stage X']
         self.create_survival_df(mutation_type)
         df = self.survival_df.sort_values("mutation_load")

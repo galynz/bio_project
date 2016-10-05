@@ -5,7 +5,7 @@ Created on Sun Jul 24 13:33:35 2016
 @author: gal
 """
 
-import csv, datetime, sys, glob
+import csv, datetime, sys, glob, os
 import xml.etree.ElementTree as ET
 import logging
 import logging.handlers
@@ -414,6 +414,7 @@ class MutationsSummary(object):
     def create_survival_df(self, mutation_type):
         self.find_high_low_mutation_load_patients(mutation_type)        
         l = []
+        hr_order = {gene : 0 for gene in HR_DEFICIENT_GENES}
         for key, i in self.ids_dict.items():
             if not i.clinical_available:
                 pass
@@ -424,9 +425,14 @@ class MutationsSummary(object):
                 mutation_load_group = 1
             data = [int(i.survival_days), i.dead, i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, mutation_load_group, i.age, i.gender, i.count_mutations(False, mutation_type), i.stage, i.get_special_group(), sum([i.hr_deficient.get(j, 0) for j in mutation_type]),key]
             for gene in HR_DEFICIENT_GENES:
-                data.append(int(i.get_gene_mutations(gene, False, mutation_type)>0))
+                gene_mutations = int(i.get_gene_mutations(gene, False, mutation_type)>0)
+                data.append(gene_mutations)
+                hr_order[gene] += gene_mutations
             l.append(tuple(data))
-        self.survival_df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES))
+        df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES))
+        self.hr_genes_order = [i[0] for i in sorted(hr_order.items(), key=lambda x: x[1])]
+        columns_order = ["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + self.hr_genes_order
+        self.survival_df = df.reindex_axis(columns_order, axis=1)
         
                 
                 
@@ -875,12 +881,12 @@ class MutationsSummary(object):
                  'Stage X']
         self.create_survival_df(mutation_type)
         df = self.survival_df.sort_values("mutation_load")
-        heatmap_trace = go.Heatmap(z=[df[i] for i in HR_DEFICIENT_GENES], y=HR_DEFICIENT_GENES, x=df.sample_barcode)
+        heatmap_trace = go.Heatmap(z=[df[i] for i in self.hr_genes_order], y=self.hr_genes_order, x=df.sample_barcode, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
         mutation_load_trace = go.Bar(x=df.sample_barcode, y=df.mutation_load/30.0)
-        age_trace = go.Heatmap(x=df.sample_barcode, y=['age']*len(df), z=df.age)
-        gender_trace = go.Heatmap(x=df.sample_barcode, y=['gender']*len(df), z=df.gender)
-        stage_trace = go.Heatmap(x=df.sample_barcode, y=['stage']*len(df), z=df.stage.apply(lambda x: stages.index(x)))
-        dead_trace = go.Heatmap(x=df.sample_barcode, y=['dead']*len(df), z=df.dead.apply(int))
+        age_trace = go.Heatmap(x=df.sample_barcode, y=['age']*len(df), z=df.age, showscale=False)
+        gender_trace = go.Heatmap(x=df.sample_barcode, y=['gender']*len(df), z=df.gender, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
+        stage_trace = go.Heatmap(x=df.sample_barcode, y=['stage']*len(df), z=df.stage.apply(lambda x: stages.index(x)), showscale=False)
+        dead_trace = go.Heatmap(x=df.sample_barcode, y=['dead']*len(df), z=df.dead.apply(int), showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
         fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5}]] + [[None]] * 4 + [[{'rowspan' : 20}]] + [[None]] * 19 + [[{}]] * 4)
         fig.append_trace(mutation_load_trace, 1, 1)
         fig.append_trace(heatmap_trace, 6, 1)
@@ -889,6 +895,7 @@ class MutationsSummary(object):
         fig.append_trace(stage_trace, 28, 1)
         fig.append_trace(dead_trace, 29, 1)
         fig['layout']['xaxis1'].update(showticklabels = False)
+        fig['layout']['yaxis1'].update(title='mutationsMb', titlefont=dict(size=8))
         fig['layout']['xaxis2'].update(showticklabels = False)
         fig['layout']['xaxis3'].update(showticklabels = False)
         fig['layout']['xaxis4'].update(showticklabels = False)

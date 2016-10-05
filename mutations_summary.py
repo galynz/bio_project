@@ -29,7 +29,7 @@ import plotly.plotly as py
 import plotly.tools as tls   
 from plotly.graph_objs import *
 from lifelines.statistics import logrank_test
-from statsmodels.formula.api import ols
+#from statsmodels.formula.api import ols
 
 from pylab import rcParams
 rcParams['figure.figsize']=10, 5
@@ -976,8 +976,8 @@ def main():
     summary.write_output("%s.patients_summary.csv" % options.output_path, options.cancer, mutation_types)
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
-    summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
-    summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
+    #summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
+    #summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
     summary.plot_heatmap(mutation_types, options.output_path)
     
     if options.cancer == 'Breast_Invasive_Carcinoma':

@@ -865,7 +865,7 @@ class MutationsSummary(object):
                                          'proficient_std' : tls.scipy.std(proficient),
                                          'size' : size, 'description' : desc})
                                          
-    def plot_heatmap(self, mutation_type, output_dir):
+    def plot_heatmap(self, mutation_type, output_path):
         stages = [None,
                  'Stage I',
                  'Stage IA',
@@ -901,7 +901,7 @@ class MutationsSummary(object):
         fig['layout']['xaxis4'].update(showticklabels = False)
         fig['layout']['xaxis5'].update(showticklabels = False)
         fig['layout']['xaxis6'].update(showticklabels = False)
-        plot(fig, auto_open=False, filename=os.path.join(output_dir, "%s_heatmap.html" % self.cancer))
+        plot(fig, auto_open=False, filename="%s_%s_heatmap.html" % (output_path, self.cancer))
         
 
 def pyplot(fig, output_path, ci=False, legend=True):
@@ -978,6 +978,7 @@ def main():
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
     summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
     summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
+    summary.plot_heatmap(mutation_types, options.output_path)
     
     if options.cancer == 'Breast_Invasive_Carcinoma':
         for special_group in ('Luminal-A', 'Luminal-B', 'PR-ER-HER2+', 'Triple-Negative', 'other'):

@@ -426,8 +426,15 @@ class MutationsSummary(object):
             data = [int(i.survival_days), i.dead, i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, mutation_load_group, i.age, i.gender, i.count_mutations(False, mutation_type), i.stage, i.get_special_group(), sum([i.hr_deficient.get(j, 0) for j in mutation_type]),key]
             for gene in HR_DEFICIENT_GENES:
                 gene_mutations = int(i.get_gene_mutations(gene, False, mutation_type)>0)
-                data.append(gene_mutations)
-                hr_order[gene] += gene_mutations
+                hr_order[gene] += gene_mutations                
+                if not gene_mutations and i.get_gene_mutations(gene, False, ["Silent"]):
+                    data.append(1)
+                else:
+                    if gene_mutations:
+                        data.append(2)
+                    else:
+                        data.append(gene_mutations)
+                
             l.append(tuple(data))
         df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES))
         self.hr_genes_order = [i[0] for i in sorted(hr_order.items(), key=lambda x: x[1])]
@@ -885,26 +892,53 @@ class MutationsSummary(object):
                  'Stage X']
         self.create_survival_df(mutation_type)
         df = self.survival_df.sort_values("mutation_load")
-        heatmap_trace = go.Heatmap(z=[df[i] for i in self.hr_genes_order], y=self.hr_genes_order, x=df.sample_barcode, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
+        heatmap_trace = go.Heatmap(z=[df[i].apply(lambda x: int(x>1)) for i in self.hr_genes_order], y=self.hr_genes_order, x=df.sample_barcode, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
         mutation_load_trace = go.Bar(x=df.sample_barcode, y=df.mutation_load/30.0)
+        mutation_count_per_gene = []
+        mutation_count_per_gene_silent = []
+        for gene in self.hr_genes_order:
+            ix = df[gene] == 2
+            mutation_count_per_gene.append(len(df[ix]))
+        for gene in self.hr_genes_order:
+            ix = df[gene] == 1
+            mutation_count_per_gene_silent.append(len(df[ix]))
+        mutation_count_per_gene_trace = go.Bar(y=self.hr_genes_order, x=mutation_count_per_gene, orientation = 'h', name='non-silent', marker = dict(
+        color = 'rgba(246, 78, 139, 0.6)',
+        line = dict(
+            color = 'rgba(246, 78, 139, 1.0)',
+            width = 2)
+    ))
+        mutation_count_per_gene_silent_trace = go.Bar(y=self.hr_genes_order, x=mutation_count_per_gene_silent, orientation = 'h', name='silent', marker = dict(
+        color = 'rgba(58, 71, 80, 0.6)',
+        line = dict(
+            color = 'rgba(58, 71, 80, 1.0)',
+            width = 2)
+    ))
         age_trace = go.Heatmap(x=df.sample_barcode, y=['age']*len(df), z=df.age, showscale=False)
         gender_trace = go.Heatmap(x=df.sample_barcode, y=['gender']*len(df), z=df.gender, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
         stage_trace = go.Heatmap(x=df.sample_barcode, y=['stage']*len(df), z=df.stage.apply(lambda x: stages.index(x) if x in stages else len(stages)), showscale=False)
         dead_trace = go.Heatmap(x=df.sample_barcode, y=['dead']*len(df), z=df.dead.apply(int), showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
-        fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5}]] + [[None]] * 4 + [[{'rowspan' : 20}]] + [[None]] * 19 + [[{}]] * 4)
+        fig = tls.make_subplots(rows=29, cols=2, specs=[[{'rowspan':5, 'colspan' : 1}, {}]] + [[None] * 2] * 4 + [[{'rowspan' : 20, 'colspan' : 1}, {'rowspan' : 20, 'colspan' : 1}]] + [[None] * 2] * 19 + [[{'colspan' : 1}, {}]] * 4)
         fig.append_trace(mutation_load_trace, 1, 1)
         fig.append_trace(heatmap_trace, 6, 1)
+        fig.append_trace(mutation_count_per_gene_silent_trace, 6, 2)
+        fig.append_trace(mutation_count_per_gene_trace, 6, 2)
         fig.append_trace(age_trace, 26, 1)
         fig.append_trace(gender_trace, 27, 1)
         fig.append_trace(stage_trace, 28, 1)
         fig.append_trace(dead_trace, 29, 1)
-        fig['layout']['xaxis1'].update(showticklabels = False)
+        for i in xrange(1,13):
+            fig['layout']['xaxis%s' % i].update(showticklabels = False)
+            fig['layout']['xaxis%s' % i].update(zeroline = False, showgrid=False)
+            fig['layout']['yaxis%s' % i].update(zeroline = False, showgrid = False)
         fig['layout']['yaxis1'].update(title='mutationsMb', titlefont=dict(size=8))
-        fig['layout']['xaxis2'].update(showticklabels = False)
-        fig['layout']['xaxis3'].update(showticklabels = False)
-        fig['layout']['xaxis4'].update(showticklabels = False)
-        fig['layout']['xaxis5'].update(showticklabels = False)
-        fig['layout']['xaxis6'].update(showticklabels = False)
+        fig['layout']['yaxis2'].update(showticklabels = False)
+        #fig['layout']['yaxis4'].update(showticklabels = False)
+        fig['layout']['yaxis6'].update(showticklabels = False)
+        fig['layout']['yaxis8'].update(showticklabels = False)
+        fig['layout']['yaxis10'].update(showticklabels = False)
+        fig['layout']['yaxis12'].update(showticklabels = False)
+        fig['layout']['barmode'] = 'stack'
         plot(fig, auto_open=False, filename="%s_%s_heatmap.html" % (output_path, self.cancer))
         
 

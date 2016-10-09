@@ -414,7 +414,8 @@ class MutationsSummary(object):
     def create_survival_df(self, mutation_type):
         self.find_high_low_mutation_load_patients(mutation_type)        
         l = []
-        hr_order = {gene : 0 for gene in HR_DEFICIENT_GENES}
+        #hr_order = {gene : 0 for gene in HR_DEFICIENT_GENES}
+        hr_order = {gene : 0 for gene in HR_DEFICIENT_GENES + NER_DEFICIENT_GENES + MMR_DEFICIENT_GENES}
         for key, i in self.ids_dict.items():
             if not i.clinical_available:
                 pass
@@ -424,7 +425,8 @@ class MutationsSummary(object):
             elif i.low_mutation_load:
                 mutation_load_group = 1
             data = [int(i.survival_days), i.dead, i.check_group_deficient('hr_deficient', mutation_type), i.check_group_deficient('ner_deficient', mutation_type), i.check_group_deficient('mmr_deficient', mutation_type), i.top_mutation_load, i.low_mutation_load, mutation_load_group, i.age, i.gender, i.count_mutations(False, mutation_type), i.stage, i.get_special_group(), sum([i.hr_deficient.get(j, 0) for j in mutation_type]),key]
-            for gene in HR_DEFICIENT_GENES:
+            #for gene in HR_DEFICIENT_GENES:
+            for gene in HR_DEFICIENT_GENES + NER_DEFICIENT_GENES + MMR_DEFICIENT_GENES:
                 gene_mutations = int(i.get_gene_mutations(gene, False, mutation_type)>0)
                 hr_order[gene] += gene_mutations                
                 if not gene_mutations and i.get_gene_mutations(gene, False, ["Silent"]):
@@ -436,7 +438,8 @@ class MutationsSummary(object):
                         data.append(gene_mutations)
                 
             l.append(tuple(data))
-        df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES))
+        #df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES))
+        df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES + NER_DEFICIENT_GENES + MMR_DEFICIENT_GENES))
         self.hr_genes_order = [i[0] for i in sorted(hr_order.items(), key=lambda x: x[1])]
         columns_order = ["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + self.hr_genes_order
         self.survival_df = df.reindex_axis(columns_order, axis=1)
@@ -930,7 +933,7 @@ class MutationsSummary(object):
         for i in xrange(1,13):
             fig['layout']['xaxis%s' % i].update(showticklabels = False)
             fig['layout']['xaxis%s' % i].update(zeroline = False, showgrid=False)
-            fig['layout']['yaxis%s' % i].update(zeroline = False, showgrid = False)
+            fig['layout']['yaxis%s' % i].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
         fig['layout']['yaxis1'].update(title='mutationsMb', titlefont=dict(size=8))
         fig['layout']['yaxis2'].update(showticklabels = False)
         #fig['layout']['yaxis4'].update(showticklabels = False)

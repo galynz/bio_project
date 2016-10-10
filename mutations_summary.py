@@ -931,9 +931,13 @@ class MutationsSummary(object):
         fig.append_trace(stage_trace, 28, 1)
         fig.append_trace(dead_trace, 29, 1)
         for i in xrange(1,13):
-            fig['layout']['xaxis%s' % i].update(showticklabels = False)
-            fig['layout']['xaxis%s' % i].update(zeroline = False, showgrid=False)
+            if i != 4:
+                fig['layout']['xaxis%s' % i].update(showticklabels = False)
+                fig['layout']['xaxis%s' % i].update(zeroline = False, showgrid=False)
+            else:
+                fig['layout']['xaxis%s' % i].update(anchor="y4", side="top")
             fig['layout']['yaxis%s' % i].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
+            
         fig['layout']['yaxis1'].update(title='mutationsMb', titlefont=dict(size=8))
         fig['layout']['yaxis2'].update(showticklabels = False)
         #fig['layout']['yaxis4'].update(showticklabels = False)

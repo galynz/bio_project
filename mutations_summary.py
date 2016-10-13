@@ -13,6 +13,7 @@ from optparse import OptionParser
 import gzip
 from tqdm import tqdm
 from Bio import Entrez
+import random
 
 import matplotlib
 matplotlib.use('Agg')
@@ -54,10 +55,11 @@ HOT_SPOT_TRESHOLD = 3
 logger = logging.getLogger("mutations_summary")
 
 class Sample(object):
-    def __init__(self, patient_barcode, tumor_barcode, norm_barcode):
+    def __init__(self, patient_barcode, tumor_barcode, norm_barcode, random_genes):
         self.patient_barcode = patient_barcode
         self.tumor_barcode = tumor_barcode
         self.norm_barcode = norm_barcode
+        self.random_genes = random_genes
         self.centers = set()
         self.mutations = {}
         self.brca1 = {}
@@ -65,6 +67,7 @@ class Sample(object):
         self.hr_deficient = {}
         self.ner_deficient = {}
         self.mmr_deficient = {}
+        self.random_deficient = {}
         self.survival_days = 0
         self.survival_update = None
         self.dead = False
@@ -123,6 +126,8 @@ class Sample(object):
                 self.ner_deficient[mutation_type] = self.ner_deficient.get(mutation_type, 0) + 1
             if hugo_symbol in MMR_DEFICIENT_GENES:
                 self.mmr_deficient[mutation_type] = self.mmr_deficient.get(mutation_type, 0) + 1
+            if hugo_symbol in self.random_genes:
+                self.random_deficient[mutation_type] = self.random_deficient.get(mutation_type, 0) + 1
     
     def count_mutations(self, distinct=True, mutation_type=None):
         if distinct:
@@ -321,7 +326,9 @@ class MutationsSummary(object):
                 #ignoring comment lines in the begining of the file
                 logger.debug("ignoring line in the begining of the file: %s", line)
                 line = f.readline().lower()
+            start_pos  = f.tell()
             file_dict = csv.DictReader(f, dialect=csv.excel_tab, fieldnames=line.split())
+            mutations_symbols = []
             for row in file_dict:
                 try:
                     tumor_barcode = row["tumor_sample_barcode"]
@@ -333,13 +340,20 @@ class MutationsSummary(object):
                     print e
                     logger.exception(e)
                     sys.exit()
+                mutation = row["hugo_symbol"]                    
+                mutations_symbols.append(mutation)
+            self.random_genes = [random.choice(mutations_symbols) for i in xrange(len(HR_DEFICIENT_GENES))]
+                
+            f.seek(start_pos)
+            for row in file_dict:
+                tumor_barcode = row["tumor_sample_barcode"]
                 norm_barcode = row["matched_norm_sample_barcode"]
                 patient_barcode = "-".join(tumor_barcode.split('-')[:3])
                 mutation = row["hugo_symbol"]
                 mutation_type = row["variant_classification"]
                 mutation_pos = (int(row["start_position"]), int(row["end_position"]))
                 #center = row["Center"]
-                sample = self.ids_dict.setdefault(patient_barcode, Sample(patient_barcode, tumor_barcode, norm_barcode))
+                sample = self.ids_dict.setdefault(patient_barcode, Sample(patient_barcode, tumor_barcode, norm_barcode, self.random_genes))
                 #sample.add_center(center)
                 sample.add_mutation(mutation, mutation_type, mutation_pos)
                 
@@ -589,7 +603,7 @@ class MutationsSummary(object):
     def plot_mutation_load_box(self, output_path, cancer, distinct, mutation_type, special_group=None):
         logger.info("plotting mutation load box plots and saving it to %s", output_path)
         count_dict ={}
-        groups = ('brca1', 'brca2', 'hr_deficient', 'ner_deficient', 'mmr_deficient')
+        groups = ('brca1', 'brca2', 'hr_deficient', 'ner_deficient', 'mmr_deficient', 'random_deficient')
         for group in groups:
             count_dict[group] = {'deficient' : [], 'proficient' : []}
         for sample in self.ids_dict.values():

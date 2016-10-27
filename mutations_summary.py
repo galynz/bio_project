@@ -308,18 +308,18 @@ class Mutation(object):
         return float(self.count_non_top_mutation_load(distinct,mutation_type))/mutations_num                 
     
 class MutationsSummary(object):
-    def __init__(self, csv_paths, clinical_paths, cancer):
+    def __init__(self, csv_paths, clinical_paths, cancer, random_num=len(HR_DEFICIENT_GENES)):
         self.ids_dict = {}
         self.mutations_dict = {}
         self.cancer = cancer
         for path in csv_paths:
-            self.add_csv_data(path)
+            self.add_csv_data(path, random_num)
             logger.info("added %s to csv files", path)
         for path in clinical_paths:            
             self.add_clinical_data(path, self.cancer)
             logger.info("added %s to clinical files", path)
         
-    def add_csv_data(self, path):
+    def add_csv_data(self, path, random_num):
         with gzip.open(path) as f:
             line = f.readline().lower()
             while line.startswith('hugo')==False:
@@ -342,7 +342,7 @@ class MutationsSummary(object):
                     sys.exit()
                 mutation = row["hugo_symbol"]                    
                 mutations_symbols.append(mutation)
-            self.random_genes = [random.choice(mutations_symbols) for i in xrange(len(HR_DEFICIENT_GENES))]
+            self.random_genes = [random.choice(mutations_symbols) for i in xrange(random_num)]
                 
             f.seek(start_pos)
             for row in file_dict:
@@ -625,6 +625,8 @@ class MutationsSummary(object):
         for group in groups:
 #            print group, len(count_dict[group]['deficient'])
             pvalue = tls.scipy.stats.ttest_ind(count_dict[group]['deficient'], count_dict[group]['proficient'], equal_var=False).pvalue
+            if group == 'random_deficient':
+                print pvalue, len(self.random_genes), tls.scipy.average(count_dict[group]['deficient']), tls.scipy.average(count_dict[group]['proficient']), len(count_dict[group]['deficient']), len(count_dict[group]['proficient'])
             if len(count_dict[group]['deficient']):
                 ks_pvalue = tls.scipy.stats.ks_2samp(count_dict[group]['deficient'], count_dict[group]['proficient']).pvalue
             else:

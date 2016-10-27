@@ -21,8 +21,9 @@ def main():
     csv_outfile = csv.DictWriter(outfile, csv_infile.fieldnames, dialect=csv.excel_tab)
     for line in csv_infile:
         if os.path.exists(os.path.join(line['id'], line['filename'])):
-            if md5(os.path.join(line['id'], line['filename'])) != line['md5']:
-                csv_outfile.writerow(line)
+            #if md5(os.path.join(line['id'], line['filename'])) != line['md5']:
+                #csv_outfile.writerow(line)
+            pass
         else:
             csv_outfile.writerow(line)
     infile.close()

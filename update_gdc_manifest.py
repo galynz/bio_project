@@ -19,6 +19,7 @@ def main():
     outfile = open(sys.argv[1] + '.final', 'wb')
     csv_infile = csv.DictReader(infile, dialect=csv.excel_tab)
     csv_outfile = csv.DictWriter(outfile, csv_infile.fieldnames, dialect=csv.excel_tab)
+    csv_outfile.writeheader()
     for line in csv_infile:
         if os.path.exists(os.path.join(line['id'], line['filename'])):
             #if md5(os.path.join(line['id'], line['filename'])) != line['md5']:

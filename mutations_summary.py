@@ -132,14 +132,14 @@ class Sample(object):
     def count_mutations(self, distinct=True, mutation_type=None):
         if distinct:
             if mutation_type:
-                return sum([len(self.mutations.get(mut_type, {})) for mut_type in mutation_type])
+                return sum([len(self.mutations.get(mut_type, {})) for mut_type in mutation_type if mut_type != 'germline'])
             # return the number of genes that has a mutation
-            return sum([len(i) for i in self.mutations.values()])
+            return sum([len(i) for j,i in self.mutations.items() if j != 'germline'])
         if mutation_type:
             #  count only specific mutation types
-            return sum([sum([len(j) for j in self.mutations.get(i, {}).values()]) for i in mutation_type])
+            return sum([sum([len(j) for j in self.mutations.get(i, {}).values()]) for i in mutation_type if i != 'germline'])
         # count all the mutations, regardless of mutations type
-        return sum([sum([len(j) for j in i.values()]) for i in self.mutations.values()])
+        return sum([sum([len(j) for j in i.values()]) for k,i in self.mutations.items() if k != 'germline'])
         
     def add_center(self, center):
         self.centers.add(center)
@@ -151,12 +151,12 @@ class Sample(object):
                     if self.mutations.get(i, {}).get(hugo_symbol, set()):
                         return 1
                 return 0
-            if sum([len(i.get(hugo_symbol, set())) for i in self.mutations.values()]):
+            if sum([len(i.get(hugo_symbol, set())) for j,i in self.mutations.items() if j != 'germline']):
                 return 1
             return 0
         if mutation_type:
             return sum([len(self.mutations.get(i, {}).get(hugo_symbol, set())) for i in mutation_type])
-        return sum([len(i.get(hugo_symbol, set())) for i in self.mutations.values()])
+        return sum([len(i.get(hugo_symbol, set())) for j,i in self.mutations.items() if j != 'germline'])
         
     def update_survival(self, survival_days, update_date, dead=False):
         if ((not self.survival_update) or update_date > self.survival_update) and survival_days:
@@ -194,12 +194,12 @@ class Sample(object):
         return group
         
     def check_group_deficient(self, group, mutation_type):
-        has_mutation = getattr(self, group)                
+        has_mutation = getattr(self, group)             
         if has_mutation:                    
             if mutation_type:
             # making sure that the mutation is of types we want to consider
                 has_mutation_type = False
-                for mut_type in mutation_type:
+                for mut_type in mutation_type+["germline"]:
                     if mutation_type == 'Silent':
                         # Skipping silent mutations, because they don't cause deficiency
                         continue
@@ -253,6 +253,9 @@ class Sample(object):
         
     def set_stage(self, stage):
         self.stage = stage
+    
+    def add_germline_mutation(self, hugo_code):
+        self.add_mutation(hugo_code, "germline", 0)
 
         
 class Mutation(object):
@@ -308,7 +311,7 @@ class Mutation(object):
         return float(self.count_non_top_mutation_load(distinct,mutation_type))/mutations_num                 
     
 class MutationsSummary(object):
-    def __init__(self, csv_paths, clinical_paths, cancer, random_num=len(HR_DEFICIENT_GENES)):
+    def __init__(self, csv_paths, clinical_paths, cancer, vcf_paths, random_num=len(HR_DEFICIENT_GENES)):
         self.ids_dict = {}
         self.mutations_dict = {}
         self.cancer = cancer
@@ -318,6 +321,9 @@ class MutationsSummary(object):
         for path in clinical_paths:            
             self.add_clinical_data(path, self.cancer)
             logger.info("added %s to clinical files", path)
+        for path in vcf_paths:            
+            self.add_vcf_data(path, self.cancer)
+            logger.info("added %s to vcf files", path)
         
     def add_csv_data(self, path, random_num):
         with gzip.open(path) as f:
@@ -359,6 +365,31 @@ class MutationsSummary(object):
                 
                 mutation_obj = self.mutations_dict.setdefault(mutation, Mutation(mutation))
                 mutation_obj.add_sample(sample)
+                
+    def add_vcf_data(self, path, cancer):
+        with gzip.open(path) as f:
+            fields = []
+            for line in f:
+                if line.startwith("chr"):
+                    if line.find("germline_risk") > -1:
+                        info = [i.split("|") for i in line[line.find("CSQ=")+len("CSQ="):line.find(" ", line.find("CSQ=")+len("CSQ="))].split(",")]
+                        hugo_code = info[0][fields.index("SYMBOL")]
+                        amino_acid = [info[i][fields.index("Amino_acid")] for i in xrange(len(fields))]
+                        # There can be more than one transcript, so maybe only part of the amino acids values won't be null
+                        for i in amino_acid:
+                            if i:
+                                self.ids_dict[sample].add_germline_mutation(hugo_code)
+                                break
+                elif line.startwith("##INDIVIDUAL"):
+                    sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)
+                    if not self.ids_dict.has_key(sample):
+                        logger.warn("didn't parse %s because the id isn't in the ids list", path)
+                elif line.startwith("##INFO"):
+                    fields = re.compile("([\w_]{1,})[\|>\"]").findall(line)
+                elif line.startswith("#CHROM"):
+                    if not fields:
+                        logger.warn("failed to parse %s", path)
+                        return
                 
     def add_clinical_data(self, path, cancer):
         tree = ET.parse(path)
@@ -469,7 +500,8 @@ class MutationsSummary(object):
                                                      "Mutations_Count_distinct",
                                                      "Cancer_Site", "Survival_days",
                                                      "BRCA1_mutated", "BRCA2_mutated",
-                                                     "HR_mutated", "NER_mutated", "MMR_mutated", "Special_group",
+                                                     "HR_mutated", "NER_mutated", "MMR_mutated", 
+                                                     "Random_mutated", "Special_group",
                                                      "Age", "Gender", "Stage"] + list (HR_DEFICIENT_GENES))
             csv_file.writeheader()
             for sample in self.ids_dict.values():
@@ -487,6 +519,7 @@ class MutationsSummary(object):
                                 "HR_mutated" : sum([sample.hr_deficient.get(i, 0) for i in mutation_type]),
                                 "NER_mutated" : sum([sample.ner_deficient.get(i, 0) for i in mutation_type]),
                                 "MMR_mutated" : sum([sample.mmr_deficient.get(i, 0) for i in mutation_type]),
+                                "Random_mutated" : sum([sample.random_deficient.get(i, 0) for i in mutation_type]),
                                 "Special_group" : sample.special_group}
                 else:
                     row_dict = {"Tumor_Sample_Barcode" : sample.tumor_barcode,
@@ -501,6 +534,7 @@ class MutationsSummary(object):
                                 "HR_mutated" : sum(sample.hr_deficient.values()),
                                 "NER_mutated" : sum(sample.ner_deficient.values()),
                                 "MMR_mutated" : sum(sample.mmr_deficient.values()),
+                                "Random_mutated" : sum([sample.random_deficient.get(i, 0) for i in mutation_type]),
                                 "Special_group" : sample.special_group}
                 row_dict["Age"] = sample.age
                 row_dict["Gender"] = sample.gender
@@ -1002,6 +1036,7 @@ def main():
     parser.add_option("-c", "--cancer", dest="cancer", help="tumor main site")
     parser.add_option("-p", "--csv_path", dest="csv_path", help="csv paths, use '' if the path contains *")
     parser.add_option("--clinical_path", dest="clinical_path", help="clinical paths, use '' if the path contains *")
+    parser.add_option("--vcf_path", dest="vcf_path", help="clinical paths, use '' if the path contains *")
     parser.add_option("--debug", default=False, action="store_false", dest="debug", help="run the script in debug mode")
     parser.add_option("-m", "--mutation_types", dest="mutation_types", default="", help="mutation types (silent, missense...) to report, a string")
     parser.add_option("-o", "--output", dest="output_path",default="output", help="where to save all the html files")
@@ -1028,11 +1063,15 @@ def main():
         clinical_paths = glob.glob(options.clinical_path)
     else:
         clinical_paths = []
+    if options.vcf_path:
+        vcf_paths = glob.glob(options.vcf_path)
+    else:
+        vcf_paths = []
     if options.mutation_types:
         mutation_types = options.mutation_types.split(",")
     else:
         mutation_types = []
-    summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths, options.cancer)
+    summary = MutationsSummary(glob.glob(options.csv_path), clinical_paths, options.cancer, vcf_paths)
     summary.write_mutation_load_output("%s.mutation_load.csv" % options.output_path, options.cancer, mutation_types)
     summary.write_output("%s.patients_summary.csv" % options.output_path, options.cancer, mutation_types)
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)

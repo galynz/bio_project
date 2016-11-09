@@ -390,6 +390,8 @@ class MutationsSummary(object):
                     if not fields:
                         logger.warn("failed to parse %s", path)
                         return
+                elif line.startswith("##gdcWorkflow") and line.find("MuTect2") == -1:
+                    return
                 
     def add_clinical_data(self, path, cancer):
         tree = ET.parse(path)

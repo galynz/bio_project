@@ -14,6 +14,7 @@ import gzip
 from tqdm import tqdm
 from Bio import Entrez
 import random
+import re
 
 import matplotlib
 matplotlib.use('Agg')
@@ -370,7 +371,7 @@ class MutationsSummary(object):
         with gzip.open(path) as f:
             fields = []
             for line in f:
-                if line.startwith("chr"):
+                if line.starstwith("chr"):
                     if line.find("germline_risk") > -1:
                         info = [i.split("|") for i in line[line.find("CSQ=")+len("CSQ="):line.find(" ", line.find("CSQ=")+len("CSQ="))].split(",")]
                         hugo_code = info[0][fields.index("SYMBOL")]

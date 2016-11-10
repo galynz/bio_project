@@ -368,31 +368,34 @@ class MutationsSummary(object):
                 mutation_obj.add_sample(sample)
                 
     def add_vcf_data(self, path, cancer):
-        with gzip.open(path) as f:
-            fields = []
-            for line in f:
-                if line.startswith("chr"):
-                    if line.find("germline_risk") > -1:
-                        info = [i.split("|") for i in line[line.find("CSQ=")+len("CSQ="):line.find(" ", line.find("CSQ=")+len("CSQ="))].split(",")]
-                        hugo_code = info[0][fields.index("SYMBOL")]
-                        amino_acid = [info[i][fields.index("Amino_acid")] for i in xrange(len(fields))]
-                        # There can be more than one transcript, so maybe only part of the amino acids values won't be null
-                        for i in amino_acid:
-                            if i:
-                                self.ids_dict[sample].add_germline_mutation(hugo_code)
-                                break
-                elif line.startswith("##INDIVIDUAL"):
-                    sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)
-                    if not self.ids_dict.has_key(sample):
-                        logger.warn("didn't parse %s because the id isn't in the ids list", path)
-                elif line.startswith("##INFO"):
-                    fields = re.compile("([\w_]{1,})[\|>\"]").findall(line)
-                elif line.startswith("#CHROM"):
-                    if not fields:
-                        logger.warn("failed to parse %s", path)
+        try:
+            with gzip.open(path) as f:
+                fields = []
+                for line in f:
+                    if line.startswith("chr"):
+                        if line.find("germline_risk") > -1:
+                            info = [i.split("|") for i in line[line.find("CSQ=")+len("CSQ="):line.find(" ", line.find("CSQ=")+len("CSQ="))].split(",")]
+                            hugo_code = info[0][fields.index("SYMBOL")]
+                            amino_acid = [info[i][fields.index("Amino_acid")] for i in xrange(len(fields))]
+                            # There can be more than one transcript, so maybe only part of the amino acids values won't be null
+                            for i in amino_acid:
+                                if i:
+                                    self.ids_dict[sample].add_germline_mutation(hugo_code)
+                                    break
+                    elif line.startswith("##INDIVIDUAL"):
+                        sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)
+                        if not self.ids_dict.has_key(sample):
+                            logger.warn("didn't parse %s because the id isn't in the ids list", path)
+                    elif line.startswith("##INFO"):
+                        fields = re.compile("([\w_]{1,})[\|>\"]").findall(line)
+                    elif line.startswith("#CHROM"):
+                        if not fields:
+                            logger.warn("failed to parse %s", path)
+                            return
+                    elif line.startswith("##gdcWorkflow") and line.find("MuTect2") == -1:
                         return
-                elif line.startswith("##gdcWorkflow") and line.find("MuTect2") == -1:
-                    return
+        except IOError:
+            logger.exception("can't read %s", path)
                 
     def add_clinical_data(self, path, cancer):
         tree = ET.parse(path)

@@ -371,7 +371,7 @@ class MutationsSummary(object):
         with gzip.open(path) as f:
             fields = []
             for line in f:
-                if line.starstwith("chr"):
+                if line.startswith("chr"):
                     if line.find("germline_risk") > -1:
                         info = [i.split("|") for i in line[line.find("CSQ=")+len("CSQ="):line.find(" ", line.find("CSQ=")+len("CSQ="))].split(",")]
                         hugo_code = info[0][fields.index("SYMBOL")]
@@ -381,11 +381,11 @@ class MutationsSummary(object):
                             if i:
                                 self.ids_dict[sample].add_germline_mutation(hugo_code)
                                 break
-                elif line.startwith("##INDIVIDUAL"):
+                elif line.startswith("##INDIVIDUAL"):
                     sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)
                     if not self.ids_dict.has_key(sample):
                         logger.warn("didn't parse %s because the id isn't in the ids list", path)
-                elif line.startwith("##INFO"):
+                elif line.startswith("##INFO"):
                     fields = re.compile("([\w_]{1,})[\|>\"]").findall(line)
                 elif line.startswith("#CHROM"):
                     if not fields:

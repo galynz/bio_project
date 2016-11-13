@@ -387,7 +387,7 @@ class MutationsSummary(object):
                                     self.ids_dict[sample].add_germline_mutation(hugo_code)
                                     break
                     elif line.startswith("##INDIVIDUAL"):
-                        sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)
+                        sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)[0]
                         if not self.ids_dict.has_key(sample):
                             logger.warn("didn't parse %s because the id isn't in the ids list", path)
                     elif line.startswith("##INFO"):

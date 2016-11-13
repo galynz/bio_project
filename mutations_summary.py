@@ -194,10 +194,14 @@ class Sample(object):
         logger.debug("patient %s group: %s", self.patient_barcode, group)
         return group
         
-    def check_group_deficient(self, group, mutation_type):
-        has_mutation = getattr(self, group)             
-        if has_mutation:                    
-            if mutation_type:
+    def check_group_deficient(self, group, mutation_type, germline_only=False):
+        has_mutation = getattr(self, group)
+        if has_mutation:
+            if germline_only:
+                if has_mutation.has_key('germline'):
+                    return True
+                return False
+            elif mutation_type:
             # making sure that the mutation is of types we want to consider
                 has_mutation_type = False
                 for mut_type in mutation_type+["germline"]:
@@ -640,7 +644,9 @@ class MutationsSummary(object):
 #                for days,count in enumerate(group_list):
 #                    csv_file.writerow({"Days" : days, "Group" : group, "Num" : count, "Cancer" : cancer, "percent out of group" : count/group_count[group]})
                     
-    def plot_mutation_load_box(self, output_path, cancer, distinct, mutation_type, special_group=None):
+    def plot_mutation_load_box(self, output_path, cancer, distinct, mutation_type, special_group=None, germline_only=False):
+        if germline_only:
+            output_path = output_path + ".germline_only"
         logger.info("plotting mutation load box plots and saving it to %s", output_path)
         count_dict ={}
         groups = ('brca1', 'brca2', 'hr_deficient', 'ner_deficient', 'mmr_deficient', 'random_deficient')
@@ -651,7 +657,7 @@ class MutationsSummary(object):
                 continue
             count = sample.count_mutations(distinct, mutation_type)/30.0 #count per megabase (assuming the avg exome length is 30mbp)
             for group in groups:
-                if sample.check_group_deficient(group, mutation_type):
+                if sample.check_group_deficient(group, mutation_type, germline_only):
                     count_dict[group]['deficient'].append(count)                        
                 else:
                     # the patient has no mutations in this gene/pathway
@@ -1122,13 +1128,15 @@ def main():
     summary.write_output("%s.patients_summary.csv" % options.output_path, options.cancer, mutation_types)
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
+    summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types, germline_only=True)
     #summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
     #summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
     summary.plot_heatmap(mutation_types, options.output_path)
     
-    if options.cancer == 'Breast_Invasive_Carcinoma':
-        for special_group in ('Luminal-A', 'Luminal-B', 'PR-ER-HER2+', 'Triple-Negative', 'other'):
-            summary.plot_mutation_load_box("%s.%s.mutation_load" % (options.output_path, special_group), options.cancer, False, mutation_types, special_group)
+    
+#    if options.cancer == 'Breast_Invasive_Carcinoma':
+#        for special_group in ('Luminal-A', 'Luminal-B', 'PR-ER-HER2+', 'Triple-Negative', 'other'):
+#            summary.plot_mutation_load_box("%s.%s.mutation_load" % (options.output_path, special_group), options.cancer, False, mutation_types, special_group)
 #    summary.create_samples_mutations_dataframe(mutation_types)
 #    summary.create_mutations_overload_pvalue_csv('%s.mutation_load_per_mutation.csv' % options.output_path)
     

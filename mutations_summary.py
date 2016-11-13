@@ -396,7 +396,7 @@ class MutationsSummary(object):
                         if not fields:
                             logger.warn("failed to parse %s", path)
                             return
-                    elif line.startswith("##gdcWorkflow") and line.find("MuTect2") == -1:
+                    elif line.startswith("##gdcWorkflow") and line.find("mutect2") == -1:
                         return
         except IOError:
             logger.exception("can't read %s", path)
@@ -1140,7 +1140,7 @@ def main():
 #    summary.create_samples_mutations_dataframe(mutation_types)
 #    summary.create_mutations_overload_pvalue_csv('%s.mutation_load_per_mutation.csv' % options.output_path)
     
-#if __name__ == "__main__":
-#    main()
+if __name__ == "__main__":
+    main()
         
         

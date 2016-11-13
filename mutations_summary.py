@@ -260,7 +260,7 @@ class Sample(object):
         self.stage = stage
     
     def add_germline_mutation(self, hugo_code):
-        self.add_mutation(hugo_code, "germline", 0)
+        self.add_mutation(hugo_code, "germline", (0,0))
 
         
 class Mutation(object):

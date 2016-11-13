@@ -513,7 +513,8 @@ class MutationsSummary(object):
                                                      "BRCA1_mutated", "BRCA2_mutated",
                                                      "HR_mutated", "NER_mutated", "MMR_mutated", 
                                                      "Random_mutated", "Special_group",
-                                                     "Age", "Gender", "Stage"] + list (HR_DEFICIENT_GENES))
+                                                     "Age", "Gender", "Stage", "HR_germline", 
+                                                     "random_germline"] + list (HR_DEFICIENT_GENES))
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()
@@ -550,6 +551,8 @@ class MutationsSummary(object):
                 row_dict["Age"] = sample.age
                 row_dict["Gender"] = sample.gender
                 row_dict["Stage"] = sample.stage
+                row_dict["HR_germline"] = sample.hr_deficient.get('germline', 0)
+                row_dict["random_germline"] = sample.random_deficient.get('germline', 0)
                 for gene in HR_DEFICIENT_GENES:
                     if sample.get_gene_mutations(gene, False, mutation_type):
                         row_dict[gene] = True

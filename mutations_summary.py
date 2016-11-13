@@ -380,7 +380,7 @@ class MutationsSummary(object):
                         if line.find("germline_risk") > -1:
                             info = [i.split("|") for i in line[line.find("CSQ=")+len("CSQ="):line.find(" ", line.find("CSQ=")+len("CSQ="))].split(",")]
                             hugo_code = info[0][fields.index("SYMBOL")]
-                            amino_acid = [info[i][fields.index("Amino_acids")] for i in xrange(len(fields)) if len(info[i]) == len(fields)]
+                            amino_acid = [info[i][fields.index("Amino_acids")] for i in xrange(len(info)) if len(info[i]) == len(fields)]
                             # There can be more than one transcript, so maybe only part of the amino acids values won't be null
                             for i in amino_acid:
                                 if i:

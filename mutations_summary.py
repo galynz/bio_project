@@ -729,7 +729,7 @@ class MutationsSummary(object):
                         boxmean=True)
         layout = go.Layout(title = 'mutatio load HR/RANDOM DEFICEINT - %s <br>pvalue = %s' % (cancer, pvalue))
         fig = go.Figure(data=[trace1, trace2], layout=layout)
-        plot(fig, auto_open=False, filename = output_path + ".random_hr.html", auto_open=False)
+        plot(fig, auto_open=False, filename = output_path + ".random_hr.html")
      
      
     def plot_survival(self, output_path, cancer, mutation_type=[]):

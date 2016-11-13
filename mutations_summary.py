@@ -693,26 +693,43 @@ class MutationsSummary(object):
         
         #Comparing random deficient and HR deficient
         pvalue = tls.scipy.stats.ttest_ind(count_dict['hr_deficient']['deficient'], count_dict['random_deficient']['deficient'], equal_var=False).pvalue
-
-        x_hr = []
-        y_hr = []
-        x_random = []
-        y_random = []
         
-        x_hr.extend(['HR_deficient<br>t_test-pvalue=%s' % pvalue] * len(count_dict['hr_deficient']['deficient']))
-        y_hr.extend(count_dict['hr_deficient']['deficient'])
-        x_random.extend(['random_deficient<br>t_test-pvalue=%s' % pvalue] * len(count_dict['random_deficient']['deficient']))
-        y_random.extend(count_dict['random_deficient']['deficient'])
-        hr = go.Box(y=y_hr, x=x_hr, 
-                           name='hr_deficient', marker=dict(color='#3D9970'))
-        random_deficient = go.Box(y=y_random, x=x_random, 
-                           name='random_deficient', marker=dict(color='#FF4136'))
-        data = [hr, random_deficient]
-        layout = go.Layout(yaxis=dict(title='%s mutation load HR/random deficient' % name,
-                                      zeroline=False),
-                            boxmode='group')
-        fig = go.Figure(data=data, layout=layout)
-        plot(fig, filename=output_path + "random_hr.html", auto_open=False)
+#        x_hr = []
+#        y_hr = []
+#        x_random = []
+#        y_random = []
+#        
+#        x_hr.extend(['HR_deficient<br>t_test-pvalue=%s' % pvalue] * len(count_dict['hr_deficient']['deficient']))
+#        y_hr.extend(count_dict['hr_deficient']['deficient'])
+#        x_random.extend(['random_deficient<br>t_test-pvalue=%s' % pvalue] * len(count_dict['random_deficient']['deficient']))
+#        y_random.extend(count_dict['random_deficient']['deficient'])
+#        hr = go.Box(y=y_hr, x=x_hr, 
+#                           name='hr_deficient', marker=dict(color='#3D9970'))
+#        random_deficient = go.Box(y=y_random, x=x_random, 
+#                           name='random_deficient', marker=dict(color='#FF4136'))
+#        data = [hr, random_deficient]
+#        layout = go.Layout(yaxis=dict(title='%s mutation load HR/random deficient' % name,
+#                                      zeroline=False),
+#                            boxmode='group')
+#        fig = go.Figure(data=data, layout=layout)
+#        plot(fig, filename=output_path + "random_hr.html", auto_open=False)
+        
+        
+        trace1 = go.Box(y=count_dict['hr_deficient']['deficient'], name='HRD', 
+                        boxpoints='all', jitter=0.5,whiskerwidth=0.2, 
+                        fillcolor='rgba(93, 164, 214, 0.5)', 
+                        marker=dict(size=2),line=dict(width=1, 
+                        color='rgba(31, 119, 180, 0.5)'),
+                        boxmean=True)
+        trace2 = go.Box(y=count_dict['random_deficient']['deficient'], name='RANDOM_DEFICIENT', 
+                        boxpoints='all', jitter=0.5,whiskerwidth=0.2, 
+                        fillcolor='rgba(44, 160, 101, 0.5)', 
+                        marker=dict(size=2),line=dict(width=1, 
+                        color='rgba(44, 160, 44, 0.5)'),
+                        boxmean=True)
+        layout = go.Layout(title = 'mutatio load HR/RANDOM DEFICEINT - %s <br>pvalue = %s' % (cancer, pvalue))
+        fig = go.Figure(data=[trace1, trace2], layout=layout)
+        plot(fig, auto_open=False, filename = output_path + ".random_hr.html", auto_open=False)
      
      
     def plot_survival(self, output_path, cancer, mutation_type=[]):

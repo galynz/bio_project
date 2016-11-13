@@ -389,6 +389,7 @@ class MutationsSummary(object):
                     elif line.startswith("##INDIVIDUAL"):
                         sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)[0]
                         if not self.ids_dict.has_key(sample):
+                            self.ids_dict.setdefault(sample, Sample(sample, sample, sample, self.random_genes))
                             logger.warn("didn't parse %s because the id isn't in the ids list", path)
                     elif line.startswith("##INFO"):
                         fields = re.compile("([\w_]{1,})[\|>\"]").findall(line)

@@ -354,6 +354,7 @@ class MutationsSummary(object):
                 mutation = row["hugo_symbol"]                    
                 mutations_symbols.append(mutation)
             self.random_genes = [random.choice(mutations_symbols) for i in xrange(random_num)]
+            logger.info("Random genes: %s", self.random_genes)
                 
             f.seek(start_pos)
             for row in file_dict:
@@ -380,12 +381,13 @@ class MutationsSummary(object):
                         if line.find("germline_risk") > -1:
                             info = [i.split("|") for i in line[line.find("CSQ=")+len("CSQ="):line.find(" ", line.find("CSQ=")+len("CSQ="))].split(",")]
                             hugo_code = info[0][fields.index("SYMBOL")]
-                            amino_acid = [info[i][fields.index("Amino_acids")] for i in xrange(len(info)) if len(info[i]) == len(fields)]
-                            # There can be more than one transcript, so maybe only part of the amino acids values won't be null
-                            for i in amino_acid:
-                                if i:
-                                    self.ids_dict[sample].add_germline_mutation(hugo_code)
-                                    break
+#                            amino_acid = [info[i][fields.index("Amino_acids")] for i in xrange(len(info)) if len(info[i]) == len(fields)]
+#                            # There can be more than one transcript, so maybe only part of the amino acids values won't be null
+#                            for i in amino_acid:
+#                                if i:
+#                                    self.ids_dict[sample].add_germline_mutation(hugo_code)
+#                                    break
+                            self.ids_dict[sample].add_germline_mutation(hugo_code)
                     elif line.startswith("##INDIVIDUAL"):
                         sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)[0]
                         if not self.ids_dict.has_key(sample):

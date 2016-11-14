@@ -124,7 +124,7 @@ class Sample(object):
             if hugo_symbol in HR_DEFICIENT_GENES:
                 self.hr_deficient[mutation_type] = self.hr_deficient.get(mutation_type, 0) + 1
                 if mutation_type == 'germline':
-                    logger.info("added germline HR mutation %s to patient %s", hugo_code, sample)
+                    logger.info("added germline HR mutation %s to patient %s", hugo_symbol, self.patient_barcode)
             if hugo_symbol in NER_DEFICIENT_GENES:
                 self.ner_deficient[mutation_type] = self.ner_deficient.get(mutation_type, 0) + 1
             if hugo_symbol in MMR_DEFICIENT_GENES:
@@ -132,7 +132,7 @@ class Sample(object):
             if hugo_symbol in self.random_genes:
                 self.random_deficient[mutation_type] = self.random_deficient.get(mutation_type, 0) + 1
                 if mutation_type == 'germline':
-                    logger.info("added germline random mutation %s to patient %s", hugo_code, sample)
+                    logger.info("added germline random mutation %s to patient %s", hugo_symbol, self.patient_barcode)
     
     def count_mutations(self, distinct=True, mutation_type=None):
         if distinct:

@@ -112,7 +112,7 @@ class Sample(object):
          
     def add_mutation(self,hugo_symbol, mutation_type, mutation_pos):
         self.mutations.setdefault(mutation_type, {}).setdefault(hugo_symbol, set())
-        if not self.mutations[mutation_type][hugo_symbol].intersection(set(mutation_pos)):
+        if self.mutations[mutation_type][hugo_symbol].isdisjoint(set(mutation_pos)):
             self.mutations[mutation_type][hugo_symbol].add(mutation_pos)
             count = sum([len(i.get(hugo_symbol, set())) for i in self.mutations.values()])
             if count == HOT_SPOT_TRESHOLD:

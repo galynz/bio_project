@@ -123,12 +123,16 @@ class Sample(object):
                 self.brca2[mutation_type] = self.brca2.get(mutation_type, 0) + 1
             if hugo_symbol in HR_DEFICIENT_GENES:
                 self.hr_deficient[mutation_type] = self.hr_deficient.get(mutation_type, 0) + 1
+                if mutation_type == 'germline':
+                    logger.info("added germline HR mutation %s to patient %s", hugo_code, sample)
             if hugo_symbol in NER_DEFICIENT_GENES:
                 self.ner_deficient[mutation_type] = self.ner_deficient.get(mutation_type, 0) + 1
             if hugo_symbol in MMR_DEFICIENT_GENES:
                 self.mmr_deficient[mutation_type] = self.mmr_deficient.get(mutation_type, 0) + 1
             if hugo_symbol in self.random_genes:
                 self.random_deficient[mutation_type] = self.random_deficient.get(mutation_type, 0) + 1
+                if mutation_type == 'germline':
+                    logger.info("added germline random mutation %s to patient %s", hugo_code, sample)
     
     def count_mutations(self, distinct=True, mutation_type=None):
         if distinct:
@@ -388,7 +392,6 @@ class MutationsSummary(object):
 #                                    self.ids_dict[sample].add_germline_mutation(hugo_code)
 #                                    break
                             self.ids_dict[sample].add_germline_mutation(hugo_code)
-                            logger.info("added germline mutation %s to patient %s", hugo_code, sample)
                     elif line.startswith("##INDIVIDUAL"):
                         sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)[0]
                         if not self.ids_dict.has_key(sample):

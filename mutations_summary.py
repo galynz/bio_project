@@ -388,6 +388,7 @@ class MutationsSummary(object):
 #                                    self.ids_dict[sample].add_germline_mutation(hugo_code)
 #                                    break
                             self.ids_dict[sample].add_germline_mutation(hugo_code)
+                            logger.info("added germline mutation %s to patient %s", hugo_code, sample)
                     elif line.startswith("##INDIVIDUAL"):
                         sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)[0]
                         if not self.ids_dict.has_key(sample):

@@ -53,6 +53,8 @@ TOP_PERCENTIL = 4 #25%
 
 HOT_SPOT_TRESHOLD = 3
 
+ALL_GENES_FILE = "Homo_sapiens.gene_info"
+
 logger = logging.getLogger("mutations_summary")
 
 class Sample(object):
@@ -324,6 +326,7 @@ class MutationsSummary(object):
         self.ids_dict = {}
         self.mutations_dict = {}
         self.cancer = cancer
+        self.choose_random_mutations(ALL_GENES_FILE, random_num)
         for path in csv_paths:
             self.add_csv_data(path, random_num)
             logger.info("added %s to csv files", path)
@@ -333,6 +336,14 @@ class MutationsSummary(object):
         for path in vcf_paths:            
             self.add_vcf_data(path, self.cancer)
             logger.info("added %s to vcf files", path)
+            
+    def choose_random_mutations(self, random_mutations_path, random_num):
+        with open(random_mutations_path) as f:
+            csv_reader = csv.DictReader(f, dialect=csv.excel_tab)
+            csv_lines = [i for i in csv_reader]
+            mutations_symbols = [line['Symbol'] for line in csv_lines[1:]]
+            self.random_genes = [random.choice(mutations_symbols) for i in xrange(random_num)]
+            logger.info("Random genes: %s", self.random_genes)
         
     def add_csv_data(self, path, random_num):
         with gzip.open(path) as f:
@@ -341,9 +352,9 @@ class MutationsSummary(object):
                 #ignoring comment lines in the begining of the file
                 logger.debug("ignoring line in the begining of the file: %s", line)
                 line = f.readline().lower()
-            start_pos  = f.tell()
+#            start_pos  = f.tell()
             file_dict = csv.DictReader(f, dialect=csv.excel_tab, fieldnames=line.split())
-            mutations_symbols = []
+#            mutations_symbols = []
             for row in file_dict:
                 try:
                     tumor_barcode = row["tumor_sample_barcode"]
@@ -355,14 +366,14 @@ class MutationsSummary(object):
                     print e
                     logger.exception(e)
                     sys.exit()
-                mutation = row["hugo_symbol"]                    
-                mutations_symbols.append(mutation)
-            self.random_genes = [random.choice(mutations_symbols) for i in xrange(random_num)]
-            logger.info("Random genes: %s", self.random_genes)
+#                mutation = row["hugo_symbol"]                    
+#                mutations_symbols.append(mutation)
+#            self.random_genes = [random.choice(mutations_symbols) for i in xrange(random_num)]
+#            logger.info("Random genes: %s", self.random_genes)
                 
-            f.seek(start_pos)
-            for row in file_dict:
-                tumor_barcode = row["tumor_sample_barcode"]
+#            f.seek(start_pos)
+#            for row in file_dict:
+#                tumor_barcode = row["tumor_sample_barcode"]
                 norm_barcode = row["matched_norm_sample_barcode"]
                 patient_barcode = "-".join(tumor_barcode.split('-')[:3])
                 mutation = row["hugo_symbol"]

@@ -200,7 +200,7 @@ class Sample(object):
         logger.debug("patient %s group: %s", self.patient_barcode, group)
         return group
         
-    def check_group_deficient(self, group, mutation_type, germline_only=False):
+    def check_group_deficient(self, group, mutation_type, germline_only=False, somatic_only=False):
         has_mutation = getattr(self, group)
         if has_mutation:
             if germline_only:
@@ -210,8 +210,10 @@ class Sample(object):
             elif mutation_type:
             # making sure that the mutation is of types we want to consider
                 has_mutation_type = False
-                for mut_type in mutation_type+["germline"]:
-                    if mutation_type == 'Silent':
+                if not somatic_only:
+                    mutation_type.append("germline")
+                for mut_type in mutation_type:
+                    if mut_type == 'Silent':
                         # Skipping silent mutations, because they don't cause deficiency
                         continue
                     if has_mutation.has_key(mut_type):
@@ -224,6 +226,12 @@ class Sample(object):
                     return False
             else:
                 # if we want to consider all mutation types
+                if somatic_only:
+                    # checking if there are non germline mutations
+                    for mut_type in has_mutation.keys():
+                        if mut_type != "germline":
+                            return True
+                    return False
                 return True
         else:
             return False
@@ -665,9 +673,11 @@ class MutationsSummary(object):
 #                for days,count in enumerate(group_list):
 #                    csv_file.writerow({"Days" : days, "Group" : group, "Num" : count, "Cancer" : cancer, "percent out of group" : count/group_count[group]})
                     
-    def plot_mutation_load_box(self, output_path, cancer, distinct, mutation_type, special_group=None, germline_only=False):
+    def plot_mutation_load_box(self, output_path, cancer, distinct, mutation_type, special_group=None, germline_only=False, somatic_only=False):
         if germline_only:
             output_path = output_path + ".germline_only"
+        if somatic_only:
+            output_path = output_path + ".somatic_only"
         logger.info("plotting mutation load box plots and saving it to %s", output_path)
         count_dict ={}
         groups = ('brca1', 'brca2', 'hr_deficient', 'ner_deficient', 'mmr_deficient', 'random_deficient')
@@ -678,7 +688,7 @@ class MutationsSummary(object):
                 continue
             count = sample.count_mutations(distinct, mutation_type)/30.0 #count per megabase (assuming the avg exome length is 30mbp)
             for group in groups:
-                if sample.check_group_deficient(group, mutation_type, germline_only):
+                if sample.check_group_deficient(group, mutation_type, germline_only=germline_only, somatic_only=somatic_only):
                     count_dict[group]['deficient'].append(count)                        
                 else:
                     # the patient has no mutations in this gene/pathway
@@ -720,27 +730,6 @@ class MutationsSummary(object):
         
         #Comparing random deficient and HR deficient
         pvalue = tls.scipy.stats.ttest_ind(count_dict['hr_deficient']['deficient'], count_dict['random_deficient']['deficient'], equal_var=False).pvalue
-        
-#        x_hr = []
-#        y_hr = []
-#        x_random = []
-#        y_random = []
-#        
-#        x_hr.extend(['HR_deficient<br>t_test-pvalue=%s' % pvalue] * len(count_dict['hr_deficient']['deficient']))
-#        y_hr.extend(count_dict['hr_deficient']['deficient'])
-#        x_random.extend(['random_deficient<br>t_test-pvalue=%s' % pvalue] * len(count_dict['random_deficient']['deficient']))
-#        y_random.extend(count_dict['random_deficient']['deficient'])
-#        hr = go.Box(y=y_hr, x=x_hr, 
-#                           name='hr_deficient', marker=dict(color='#3D9970'))
-#        random_deficient = go.Box(y=y_random, x=x_random, 
-#                           name='random_deficient', marker=dict(color='#FF4136'))
-#        data = [hr, random_deficient]
-#        layout = go.Layout(yaxis=dict(title='%s mutation load HR/random deficient' % name,
-#                                      zeroline=False),
-#                            boxmode='group')
-#        fig = go.Figure(data=data, layout=layout)
-#        plot(fig, filename=output_path + "random_hr.html", auto_open=False)
-        
         
         trace1 = go.Box(y=count_dict['hr_deficient']['deficient'], name='HRD', 
                         boxpoints='all', jitter=0.5,whiskerwidth=0.2, 
@@ -1150,6 +1139,7 @@ def main():
 #    summary.write_survival_output("survival_report_%s.csv" % options.cancer, options.cancer)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types)
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types, germline_only=True)
+    summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types, somatic_only=True)
     #summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
     #summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
     summary.plot_heatmap(mutation_types, options.output_path)

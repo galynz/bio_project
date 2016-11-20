@@ -348,7 +348,7 @@ class MutationsSummary(object):
     def choose_random_mutations(self, random_mutations_path, random_num):
         with open(random_mutations_path) as f:
             csv_reader = csv.DictReader(f, dialect=csv.excel_tab)
-            csv_lines = [i for i in csv_reader]
+            csv_lines = [i for i in csv_reader if i["type_of_gene"] == "protein-coding"]
             mutations_symbols = [line['Symbol'] for line in csv_lines[1:]]
             self.random_genes = [random.choice(mutations_symbols) for i in xrange(random_num)]
             logger.info("Random genes: %s", self.random_genes)

@@ -211,8 +211,10 @@ class Sample(object):
             # making sure that the mutation is of types we want to consider
                 has_mutation_type = False
                 if not somatic_only:
-                    mutation_type.append("germline")
-                for mut_type in mutation_type:
+                    new_mutation_type  = mutation_type + ["germline"]
+                else:
+                    new_mutation_type = mutation_type
+                for mut_type in new_mutation_type:
                     if mut_type == 'Silent':
                         # Skipping silent mutations, because they don't cause deficiency
                         continue
@@ -689,10 +691,12 @@ class MutationsSummary(object):
             count = sample.count_mutations(distinct, mutation_type)/30.0 #count per megabase (assuming the avg exome length is 30mbp)
             for group in groups:
                 if sample.check_group_deficient(group, mutation_type, germline_only=germline_only, somatic_only=somatic_only):
-                    count_dict[group]['deficient'].append(count)                        
+                    count_dict[group]['deficient'].append(count)
+                    logger.debug("Added sample %s with %s mutations (per megabase) to %s deficient", sample.patient_barcode, count, group)
                 else:
                     # the patient has no mutations in this gene/pathway
                     count_dict[group]['proficient'].append(count)
+                    logger.debug("Added sample %s with %s mutations (per megabase) to %s proficient", sample.patient_barcode, count, group)
         x_deficient = []
         x_proficient = []
         

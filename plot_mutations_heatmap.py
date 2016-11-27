@@ -192,7 +192,7 @@ def plot_heatmap(samples_dict, output_path, cancer):
     df = tmp_df.sort_values("somatic_mutations_count")
     heatmap_trace = go.Heatmap(z=[df[i] for i in all_genes], y=all_genes, x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
     mutation_load_trace = go.Bar(x=df.patient_id, y=df.somatic_mutations_count/30.0)
-    fig = tls.make_subplots(rows=29, cols=2, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)
+    fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)
     fig.append_trace(mutation_load_trace, 1, 1)
     fig.append_trace(heatmap_trace, 6, 1)
     plot(fig, auto_open=False, filename="%s_%s_heatmap.html" % (output_path, cancer))

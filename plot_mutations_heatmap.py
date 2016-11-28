@@ -125,7 +125,10 @@ def parse_vcf(vcf_path, samples_dict):
     try:
         with gzip.open(vcf_path) as f:
             fields = []
+            logger.info("going over %s", vcf_path)
+            n = 0
             for line in f:
+                n += 1
                 if line.startswith("chr"):
                     if line.find("germline_risk") > -1:
                         info = [i.split("|") for i in line[line.find("CSQ=")+len("CSQ="):line.find(" ", line.find("CSQ=")+len("CSQ="))].split(",")]
@@ -145,10 +148,11 @@ def parse_vcf(vcf_path, samples_dict):
                     fields = re.compile("([\w_]{1,})[\|>\"]").findall(line)
                 elif line.startswith("#CHROM"):
                     if not fields:
-                        logger.warn("failed to parse %s", path)
+                        logger.warn("failed to parse %s", vcf_path)
                         return
                 elif line.startswith("##gdcWorkflow") and line.find("mutect2") == -1:
                     return
+                logger.debug("went over %d lines in file %s", n, vcf_path)
     except IOError:
         logger.exception("can't read %s", vcf_path)
             

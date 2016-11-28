@@ -150,7 +150,7 @@ def parse_vcf(vcf_path, samples_dict):
                 elif line.startswith("##gdcWorkflow") and line.find("mutect2") == -1:
                     return
     except IOError:
-        logger.exception("can't read %s", path)
+        logger.exception("can't read %s", vcf_path)
             
 def add_csv_data(path, samples_dict):
         with gzip.open(path) as f:

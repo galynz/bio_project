@@ -111,7 +111,7 @@ class Sample(object):
         self.germline_mutations = dict()
         self.somatic_mutations = set()
         
-    def add_germline_muutation(self, gene, mutation_priority):
+    def add_germline_mutation(self, gene, mutation_priority):
         self.germline_mutations[gene] = min(mutation_priority, self.germline_mutations.get(gene, 10))
         
     def add_somatic_mutation(self, gene):

@@ -139,6 +139,8 @@ def parse_vcf(vcf_path, samples_dict):
                                 priority = BIOTYPE_PRIORITY[biotype]
                                 samples_dict[sample].add_germline_mutation(hugo_code, priority)
                                 logger.debug("added gene %s with priority %d to sample %s", hugo_code, priority, sample)
+                                if vcf_path == "/groups/nshomron/galyankovitz/storage_1_root/vcf_files/Breast_Invasive_Carcinoma/003cb96e-d759-4304-8d07-17e859f5d9f1/003cb96e-d759-4304-8d07-17e859f5d9f1.vep.reheader.vcf.gz":
+                                    print hugo_code, priority, n
                 elif line.startswith("##INDIVIDUAL"):
                     sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)[0]
                     if not samples_dict.has_key(sample):

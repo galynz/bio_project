@@ -243,7 +243,7 @@ def main():
     # Logger
     formatter = logging.Formatter('%(process)d %(asctime)s %(levelname)s %(message)s')
     handler = logging.handlers.RotatingFileHandler(
-              "mutations_summary.log", maxBytes=10*1024*1024, backupCount=5, mode="a")
+              "plot_mutations_heatmap.log", maxBytes=10*1024*1024, backupCount=5, mode="a")
 
     if options.debug:
         logging_level = logging.DEBUG
@@ -258,14 +258,17 @@ def main():
     
     if options.vcf_path:
         vcf_paths = glob.glob(options.vcf_path)
+        logger.info("going over %d vcf files", len(vcf_paths))
     else:
         vcf_paths = []
 
     csv_paths = glob.glob(options.csv_path)
     samples_dict = {}
+    logger.info("parsing csv files")
     for csv_path in csv_paths:
         add_csv_data(csv_path, samples_dict)
         
+    logger.info("parsing vcf files")
     for vcf_path in vcf_paths:
         parse_vcf(vcf_path, samples_dict)
 

@@ -136,9 +136,12 @@ def parse_vcf(vcf_path, samples_dict):
                             if len(i) == len(fields):
                                 hugo_code = i[fields.index("SYMBOL")]
                                 biotype = i[fields.index("BIOTYPE")]
-                                priority = BIOTYPE_PRIORITY[biotype]
-                                samples_dict[sample].add_germline_mutation(hugo_code, priority)
-                                logger.debug("added gene %s with priority %d to sample %s", hugo_code, priority, sample)
+                                if BIOTYPE_PRIORITY.has_key(biotype):
+                                    priority = BIOTYPE_PRIORITY[biotype]
+                                    samples_dict[sample].add_germline_mutation(hugo_code, priority)
+                                    logger.debug("added gene %s with priority %d to sample %s", hugo_code, priority, sample)
+                                else:
+                                    logger.error("didn't add gene %s with biotype %s to sample %s because the biotype is not recognized", hugo_code, priority, sample)
                 elif line.startswith("##INDIVIDUAL"):
                     sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)[0]
                     if not samples_dict.has_key(sample):

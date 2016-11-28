@@ -185,6 +185,7 @@ def plot_heatmap(samples_dict, output_path, cancer):
         for gene in sample.germline_mutations:
             all_genes.add(gene)
     all_genes = list(all_genes)
+    logger.info("germline genes num: %d", len(all_genes))
             
     l = []
     for sample in samples_dict.values():
@@ -197,6 +198,12 @@ def plot_heatmap(samples_dict, output_path, cancer):
     fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)
     fig.append_trace(mutation_load_trace, 1, 1)
     fig.append_trace(heatmap_trace, 6, 1)
+    fig['layout']['xaxis1'].update(showticklabels = False)
+    fig['layout']['xaxis1'].update(zeroline = False, showgrid=False)
+    fig['layout']['yaxis1'].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
+    fig['layout']['xaxis2'].update(showticklabels = False)
+    fig['layout']['xaxis2'].update(zeroline = False, showgrid=False)
+    fig['layout']['yaxis2'].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
     plot(fig, auto_open=False, filename="%s_%s_heatmap.html" % (output_path, cancer))
     
 def pyplot(fig, output_path, ci=False, legend=True):

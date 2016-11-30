@@ -191,16 +191,24 @@ def plot_heatmap(samples_dict, output_path, cancer):
     for sample in samples_dict.values():
         for gene in sample.germline_mutations:
             all_genes_dict[gene] = all_genes_dict.get(gene, 0) + 1
-    all_genes = [i[0] for i in sorted(all_genes_dict.items(), key=lambda x: x[1], reverse=True)]
+    all_genes = [i[0] for i in sorted(all_genes_dict.items(), key=lambda x: x[1], reverse=True)] #Sorted, incase we'll want it  sorted in the future (taking the 500 most communly mutated genes didn't work)
     logger.info("germline genes num: %d", len(all_genes))
-    top_genes = all_genes[:500]
-            
+
+    # Creating a df            
     l = []
     for sample in samples_dict.values():
-        l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [-1*sample.germline_mutations.get(i, 10) for i in top_genes]
+        l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [-1*sample.germline_mutations.get(i, 10) for i in all_genes]
         l.append(l_sample)
-    tmp_df = pd.DataFrame(data=l, columns=["somatic_mutations_count", "patient_id"]+top_genes)
+    tmp_df = pd.DataFrame(data=l, columns=["somatic_mutations_count", "patient_id"]+all_genes)
     df = tmp_df.sort_values("somatic_mutations_count")
+    genes_var_list = []
+    for gene in all_genes:
+        gene_var = df[gene].var()
+        genes_var_list.append((gene, gene_var))
+    genes_var_list.sort(key=lambda x: x[1], reverse=True)
+    top_genes = [i[0] for i in genes_var_list][:500]
+    
+    # Plotting the heatmap
     heatmap_trace = go.Heatmap(z=[df[i] for i in top_genes], y=top_genes, x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
     mutation_load_trace = go.Bar(x=df.patient_id, y=df.somatic_mutations_count/30.0)
     fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)

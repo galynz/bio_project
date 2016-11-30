@@ -17,6 +17,10 @@ import plotly.graph_objs as go
 import numpy as np
 import pandas as pd
 import lifelines as ll
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.cluster.hierarchy import cophenet
+from scipy.spatial.distance import pdist
+import pylab
 
 # Plotting helpers
 #from IPython.display import HTML
@@ -221,6 +225,35 @@ def plot_heatmap(samples_dict, output_path, cancer):
     fig['layout']['xaxis2'].update(zeroline = False, showgrid=False)
     fig['layout']['yaxis2'].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
     plot(fig, auto_open=False, filename="%s_%s_heatmap.html" % (output_path, cancer))
+    
+    plot_clustered_heatmap(df, top_genes, cancer, output_path + ".png")
+    
+def plot_clustered_heatmap(df, genes_list, cancer, output_path):
+    # Build nxm matrix (n samples, m genes)
+    X = df[genes_list].as_matrix()
+    
+    Z = linkage(X, 'ward')
+    c, coph_dists = cophenet(Z, pdist(X))
+    print "Cophenetic Correlation Coefficient:", c
+    
+    #layout = go.Layout(yaxis=dict(title='%s germline mutations (ordered by samples somatic mutation load)'% cancer, zeroline=False))    
+    fig = pylab.figure(figsize=(8,8))
+    ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
+    ax1.set_xticks([])
+    ax1.set_yticks([])
+    axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
+    den = dendrogram(Z, orientation='right')
+    idx = den['leaves']
+    X = X[idx,:]
+    
+    im = axmatrix.matshow(X, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)
+    axmatrix.set_xticks([])
+    axmatrix.set_yticks([])
+    # Plot colorbar.
+    axcolor = fig.add_axes([0.91,0.1,0.02,0.6])
+    pylab.colorbar(im, cax=axcolor)
+    fig.savefig(output_path)
+    
     
 def pyplot(fig, output_path, ci=False, legend=True):
     # Convert mpl fig obj to plotly fig obj, resize to plotly's default

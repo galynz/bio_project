@@ -242,7 +242,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     ax1.set_xticks([])
     ax1.set_yticks([])
     axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
-    den = dendrogram(Z, orientation='right')
+    den = dendrogram(Z, orientation='left')
     idx = den['leaves']
     X = X[idx,:]
     
@@ -253,6 +253,20 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     axcolor = fig.add_axes([0.91,0.1,0.02,0.6])
     pylab.colorbar(im, cax=axcolor)
     fig.savefig(output_path)
+    
+    # Plotting the heatmap (without the hirarchy)
+    heatmap_trace = go.Heatmap(z=X, x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
+    mutation_load_trace = go.Bar(x=df.patient_id, y=df.somatic_mutations_count/30.0)
+    fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)
+    fig.append_trace(mutation_load_trace, 1, 1)
+    fig.append_trace(heatmap_trace, 6, 1)
+    fig['layout']['xaxis1'].update(showticklabels = False)
+    fig['layout']['xaxis1'].update(zeroline = False, showgrid=False)
+    fig['layout']['yaxis1'].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
+    fig['layout']['xaxis2'].update(showticklabels = False)
+    fig['layout']['xaxis2'].update(zeroline = False, showgrid=False)
+    fig['layout']['yaxis2'].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
+    plot(fig, auto_open=False, filename="%s_%s_heatmap2.html" % (output_path, cancer))
     
     
 def pyplot(fig, output_path, ci=False, legend=True):

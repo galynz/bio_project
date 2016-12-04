@@ -32,6 +32,8 @@ from lifelines.statistics import logrank_test
 
 logger = logging.getLogger("mutations_heatmap")
 
+FRACTION = 0.2
+
 BIOTYPE_PRIORITY = {'protein_coding' : 1, # Contains an open reading frame (ORF)
                     'LRG_gene' : 2, # Gene in a "Locus Reference Genomic" region known to have disease-related sequence variations
                     'IG_C_gene' : 2, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
@@ -116,13 +118,17 @@ class Sample(object):
         self.somatic_mutations = set()
         
     def add_germline_mutation(self, gene, mutation_priority):
-        self.germline_mutations[gene] = min(mutation_priority, self.germline_mutations.get(gene, 10))
+        self.germline_mutations[gene] = {'severity' : min(mutation_priority, self.germline_mutations.get(gene, {}).get('severity', 10)), 
+                                        'count' = self.germline_mutations.get(gene, {}).get('count', 0) + 1)}
         
     def add_somatic_mutation(self, gene):
         self.somatic_mutations.add(gene)
         
     def count_somatic_mutations(self):
         return len(self.somatic_mutations)
+    
+    def count_germline_mutations(self, gene):
+        return self.germline_mutations.get(gene, {}).get('count', 0)
         
         
 def parse_vcf(vcf_path, samples_dict):
@@ -189,7 +195,7 @@ def add_csv_data(path, samples_dict):
                     sample = samples_dict.setdefault(patient_barcode, Sample(patient_barcode))
                     sample.add_somatic_mutation(gene)
                     
-def plot_heatmap(samples_dict, output_path, cancer):
+def create_df(samples_dict, z_param):
     # Creating a set of all the genes    
     all_genes_dict = {}
     for sample in samples_dict.values():
@@ -201,17 +207,43 @@ def plot_heatmap(samples_dict, output_path, cancer):
     # Creating a df            
     l = []
     for sample in samples_dict.values():
-        l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [-1*sample.germline_mutations.get(i, 10) for i in all_genes]
+        if z_param == 'severity':
+            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [-1*sample.germline_mutations.get(i, 10) for i in all_genes]
+        elif z_param == 'germline_count':
+            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.count_germline_mutations(i) for i in all_genes]
         l.append(l_sample)
     tmp_df = pd.DataFrame(data=l, columns=["somatic_mutations_count", "patient_id"]+all_genes)
     df = tmp_df.sort_values("somatic_mutations_count")
     genes_var_list = []
+
+    return df, all_genes
+
+def plot_heatmap_var(samples_dict, output_path, cancer, df, all_genes):
+    #Creating a list of top var genes
     for gene in all_genes:
         gene_var = df[gene].var()
         genes_var_list.append((gene, gene_var))
     genes_var_list.sort(key=lambda x: x[1], reverse=True)
     top_genes = [i[0] for i in genes_var_list][:500]
+    plot_heatmap(samples_dict, output_path + ".top_var_genes", cancer, df, top_genes)
     
+    
+def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes):
+    #top mutation load patients genes
+    top_mutation_load_patients_ix = df["somatic_mutations_count"] >= df["somatic_mutations_count"].quantile(1-FRACTION)
+    top_mutation_load_df = df[top_mutation_load_patients_ix]
+    low_mutation_load_patients_ix = df["somatic_mutations_count"] >= df["somatic_mutations_count"].quantile(FRACTION)
+    low_mutation_load_df = df[low_mutation_load_patients_ix]
+    top_genes = []
+    low_genes = []
+    for gene in all_genes:
+        if top_mutation_load_df[gene].sum() > 0 and low_mutation_load_df[gene].sum() == 0:
+            top_genes.append(gene)
+        elif top_mutation_load_df[gene].sum() == 0 and low_mutation_load_df[gene].sum() > 0:
+            low_genes.append(gene)
+    plot_heatmap(samples_dict, output_path + ".top_low_genes", cancer, df, top_genes+low_genes)
+        
+def plot_heatmap(samples_dict, output_path, cancer, df, genes):
     # Plotting the heatmap
     heatmap_trace = go.Heatmap(z=[df[i] for i in top_genes], y=top_genes, x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
     mutation_load_trace = go.Bar(x=df.patient_id, y=df.somatic_mutations_count/30.0)
@@ -342,7 +374,9 @@ def main():
     for vcf_path in vcf_paths:
         parse_vcf(vcf_path, samples_dict)
 
-    plot_heatmap(samples_dict, options.output_path, options.cancer)   
+    df, all_genes = create_df(samples_dict, 'germline_count')
+    plot_heatmap_top_low_unique(samples_dict, options.output_path, options.cancer, df, all_genes)
+    plot_heatmap_var(samples_dict, options.output_path, options.cancer, df, all_genes)
     
 if __name__ == "__main__":
     main()

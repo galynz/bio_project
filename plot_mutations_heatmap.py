@@ -130,6 +130,11 @@ class Sample(object):
     def count_germline_mutations(self, gene):
         return self.germline_mutations.get(gene, {}).get('count', 0)
         
+    def check_geremline_mutations(self, gene):
+        if self.germline_mutations.get(gene, {}).get('count', 0) == 0:
+            return 0
+        return 1
+        
         
 def parse_vcf(vcf_path, samples_dict):
     try:
@@ -211,6 +216,8 @@ def create_df(samples_dict, z_param):
             l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [-1*sample.germline_mutations.get(i, 10) for i in all_genes]
         elif z_param == 'germline_count':
             l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.count_germline_mutations(i) for i in all_genes]
+        elif z_param == 'germline_binary':
+            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.check_germline_mutations(i) for i in all_genes]
         l.append(l_sample)
     tmp_df = pd.DataFrame(data=l, columns=["somatic_mutations_count", "patient_id"]+all_genes)
     df = tmp_df.sort_values("somatic_mutations_count")
@@ -375,7 +382,7 @@ def main():
     for vcf_path in vcf_paths:
         parse_vcf(vcf_path, samples_dict)
 
-    df, all_genes = create_df(samples_dict, 'germline_count')
+    df, all_genes = create_df(samples_dict, 'germline_binary')
     print len(all_genes)
     plot_heatmap_top_low_unique(samples_dict, options.output_path, options.cancer, df, all_genes)
     plot_heatmap_var(samples_dict, options.output_path, options.cancer, df, all_genes)

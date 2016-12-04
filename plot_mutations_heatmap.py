@@ -151,7 +151,7 @@ def parse_vcf(vcf_path, samples_dict):
                                     samples_dict[sample].add_germline_mutation(hugo_code, priority)
                                     logger.debug("added gene %s with priority %d to sample %s", hugo_code, priority, sample)
                                 else:
-                                    logger.error("didn't add gene %s with biotype %s to sample %s because the biotype is not recognized", hugo_code, biotype, sample)
+                                    logger.debug("didn't add gene %s with biotype %s to sample %s because the biotype is not recognized", hugo_code, biotype, sample)
                 elif line.startswith("##INDIVIDUAL"):
                     sample = re.compile(r'INDIVIDUAL=<NAME=(TCGA-[A-Z0-9-]*),').findall(line)[0]
                     if not samples_dict.has_key(sample):
@@ -241,7 +241,7 @@ def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes
             top_genes.append(gene)
         elif top_mutation_load_df[gene].sum() == 0 and low_mutation_load_df[gene].sum() > 0:
             low_genes.append(gene)
-    logger.info("top_genes: %d, low_genes: %d, all_genes: %d", top_genes, low_genes, low_genes)
+    logger.info("top_genes: %d, low_genes: %d, all_genes: %d", len(top_genes), len(low_genes), len(all_genes))
     plot_heatmap(samples_dict, output_path + ".top_low_genes", cancer, df, top_genes+low_genes)
         
 def plot_heatmap(samples_dict, output_path, cancer, df, genes):
@@ -376,6 +376,7 @@ def main():
         parse_vcf(vcf_path, samples_dict)
 
     df, all_genes = create_df(samples_dict, 'germline_count')
+    print len(all_genes)
     plot_heatmap_top_low_unique(samples_dict, options.output_path, options.cancer, df, all_genes)
     plot_heatmap_var(samples_dict, options.output_path, options.cancer, df, all_genes)
     

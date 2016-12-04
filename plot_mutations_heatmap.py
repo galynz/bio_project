@@ -245,7 +245,7 @@ def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes
         
 def plot_heatmap(samples_dict, output_path, cancer, df, genes):
     # Plotting the heatmap
-    heatmap_trace = go.Heatmap(z=[df[i] for i in top_genes], y=top_genes, x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
+    heatmap_trace = go.Heatmap(z=[df[i] for i in top_genes], y=genes, x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
     mutation_load_trace = go.Bar(x=df.patient_id, y=df.somatic_mutations_count/30.0)
     fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)
     fig.append_trace(mutation_load_trace, 1, 1)
@@ -258,7 +258,7 @@ def plot_heatmap(samples_dict, output_path, cancer, df, genes):
     fig['layout']['yaxis2'].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
     plot(fig, auto_open=False, filename="%s_%s_heatmap.html" % (output_path, cancer))
     
-    plot_clustered_heatmap(df, top_genes, cancer, output_path + ".png")
+    plot_clustered_heatmap(df, genes, cancer, output_path)
     
 def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     # Build nxm matrix (n samples, m genes)
@@ -278,13 +278,13 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     idx = den['leaves']
     X = X[idx,:]
     
-    im = axmatrix.matshow(X, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)
-    axmatrix.set_xticks([])
-    axmatrix.set_yticks([])
-    # Plot colorbar.
-    axcolor = fig.add_axes([0.91,0.1,0.02,0.6])
-    pylab.colorbar(im, cax=axcolor)
-    fig.savefig(output_path)
+#    im = axmatrix.matshow(X, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)
+#    axmatrix.set_xticks([])
+#    axmatrix.set_yticks([])
+#    # Plot colorbar.
+#    axcolor = fig.add_axes([0.91,0.1,0.02,0.6])
+#    pylab.colorbar(im, cax=axcolor)
+#    fig.savefig(output_path)
     
     # Plotting the heatmap (without the hirarchy)
     heatmap_trace = go.Heatmap(z=X, x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])

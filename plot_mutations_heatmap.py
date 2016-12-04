@@ -214,12 +214,12 @@ def create_df(samples_dict, z_param):
         l.append(l_sample)
     tmp_df = pd.DataFrame(data=l, columns=["somatic_mutations_count", "patient_id"]+all_genes)
     df = tmp_df.sort_values("somatic_mutations_count")
-    genes_var_list = []
 
     return df, all_genes
 
 def plot_heatmap_var(samples_dict, output_path, cancer, df, all_genes):
     #Creating a list of top var genes
+    genes_var_list = []
     for gene in all_genes:
         gene_var = df[gene].var()
         genes_var_list.append((gene, gene_var))
@@ -230,9 +230,9 @@ def plot_heatmap_var(samples_dict, output_path, cancer, df, all_genes):
     
 def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes):
     #top mutation load patients genes
-    top_mutation_load_patients_ix = df["somatic_mutations_count"] >= df["somatic_mutations_count"].quantile(1-FRACTION)
+    top_mutation_load_patients_ix = (df["somatic_mutations_count"] >= df["somatic_mutations_count"].quantile(1-FRACTION))
     top_mutation_load_df = df[top_mutation_load_patients_ix]
-    low_mutation_load_patients_ix = df["somatic_mutations_count"] >= df["somatic_mutations_count"].quantile(FRACTION)
+    low_mutation_load_patients_ix = (df["somatic_mutations_count"] <= df["somatic_mutations_count"].quantile(FRACTION))
     low_mutation_load_df = df[low_mutation_load_patients_ix]
     top_genes = []
     low_genes = []
@@ -241,6 +241,7 @@ def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes
             top_genes.append(gene)
         elif top_mutation_load_df[gene].sum() == 0 and low_mutation_load_df[gene].sum() > 0:
             low_genes.append(gene)
+    logger.info("top_genes: %d, low_genes: %d, all_genes: %d", top_genes, low_genes, low_genes)
     plot_heatmap(samples_dict, output_path + ".top_low_genes", cancer, df, top_genes+low_genes)
         
 def plot_heatmap(samples_dict, output_path, cancer, df, genes):

@@ -119,7 +119,7 @@ class Sample(object):
         
     def add_germline_mutation(self, gene, mutation_priority):
         self.germline_mutations[gene] = {'severity' : min(mutation_priority, self.germline_mutations.get(gene, {}).get('severity', 10)), 
-                                        'count' = self.germline_mutations.get(gene, {}).get('count', 0) + 1)}
+                                        'count' : self.germline_mutations.get(gene, {}).get('count', 0) + 1)}
         
     def add_somatic_mutation(self, gene):
         self.somatic_mutations.add(gene)

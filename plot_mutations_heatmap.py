@@ -136,7 +136,7 @@ class Sample(object):
         return 1
         
         
-def parse_vcf(vcf_path, samples_dict):
+def parse_vcf(vcf_path, samples_dict, vcf_list_file):
     try:
         with gzip.open(vcf_path) as f:
             fields = []
@@ -170,6 +170,7 @@ def parse_vcf(vcf_path, samples_dict):
                         return
                 elif line.startswith("##gdcWorkflow") and line.find("mutect2") == -1:
                     return
+            vcf_list_file.write(vcf_path + "\n")
             logger.debug("went over %d lines in file %s", n, vcf_path)
     except IOError:
         logger.exception("can't read %s", vcf_path)
@@ -379,8 +380,9 @@ def main():
         add_csv_data(csv_path, samples_dict)
         
     logger.info("parsing vcf files")
+    vcf_list_file = open("vcf_files.txt", "wb")
     for vcf_path in vcf_paths:
-        parse_vcf(vcf_path, samples_dict)
+        parse_vcf(vcf_path, samples_dict, vcf_list_file)
 
     df, all_genes = create_df(samples_dict, 'germline_binary')
     print len(all_genes)

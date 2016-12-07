@@ -32,7 +32,7 @@ from lifelines.statistics import logrank_test
 
 logger = logging.getLogger("mutations_heatmap")
 
-FRACTION = 0.2
+FRACTION = 0.15
 
 BIOTYPE_PRIORITY = {'protein_coding' : 1, # Contains an open reading frame (ORF)
                     'LRG_gene' : 2, # Gene in a "Locus Reference Genomic" region known to have disease-related sequence variations
@@ -273,7 +273,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     # Build nxm matrix (n samples, m genes)
     X = df[genes_list].as_matrix()
     
-    Z = linkage(X, 'ward')
+    Z = linkage(X, 'complete')
     c, coph_dists = cophenet(Z, pdist(X))
     print "Cophenetic Correlation Coefficient:", c
     

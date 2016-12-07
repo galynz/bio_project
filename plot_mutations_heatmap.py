@@ -130,7 +130,6 @@ class Sample(object):
     def count_germline_mutations(self, gene):
         return self.germline_mutations.get(gene, {}).get('count', 0)
         
-    def check_geremline_mutations(self, gene):
         if self.germline_mutations.get(gene, {}).get('count', 0) == 0:
             return 0
         return 1
@@ -348,6 +347,7 @@ def main():
     parser.add_option("--vcf_path", dest="vcf_path", help="clinical paths, use '' if the path contains *")
     parser.add_option("--debug", default=False, action="store_true", dest="debug", help="run the script in debug mode")
     parser.add_option("-o", "--output", dest="output_path",default="output", help="where to save all the html files")
+    parser.add_option("--vcf_list", dest="vcf_list", help="a txt file with a list of vcf paths to use")
     
     (options, args) = parser.parse_args()
     
@@ -367,7 +367,13 @@ def main():
     logger.info("starting the script")
     logger.info("cancer type: %s", options.cancer)
     
-    if options.vcf_path:
+    if options.vcf_list:
+        vcf_paths = []        
+        with open(options.vcf_list, "rb") as f:
+            for line in f:
+                vcf_paths.append(line.replace("\n", ""))
+        
+    elif options.vcf_path:
         vcf_paths = glob.glob(options.vcf_path)
         logger.info("going over %d vcf files", len(vcf_paths))
     else:

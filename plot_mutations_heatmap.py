@@ -217,7 +217,8 @@ def create_df(samples_dict, z_param):
         elif z_param == 'germline_count':
             l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.count_germline_mutations(i) for i in all_genes]
         elif z_param == 'germline_binary':
-            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.count_germline_mutations(i) for i in all_genes]
+            func = lambda x : int(x>0)
+            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [func(sample.count_germline_mutations(i)) for i in all_genes]
         l.append(l_sample)
     tmp_df = pd.DataFrame(data=l, columns=["somatic_mutations_count", "patient_id"]+all_genes)
     df = tmp_df.sort_values("somatic_mutations_count")

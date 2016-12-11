@@ -285,7 +285,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
 #    axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
     den = dendrogram(Z, orientation='left')
     idx = den['leaves']
-    open("tmp.txt", "wb").write(idx)
+    open("tmp.txt", "wb").write(str(idx))
     X = X[idx,:]
     
 #    im = axmatrix.matshow(X, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)

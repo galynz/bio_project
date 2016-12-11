@@ -169,7 +169,7 @@ def parse_vcf(vcf_path, samples_dict, vcf_list_file):
                         return
                 elif line.startswith("##gdcWorkflow") and line.find("mutect2") == -1:
                     return
-#            vcf_list_file.write(vcf_path + "\n")
+            vcf_list_file.write(vcf_path + "\n")
             logger.debug("went over %d lines in file %s", n, vcf_path)
     except IOError:
         logger.exception("can't read %s", vcf_path)

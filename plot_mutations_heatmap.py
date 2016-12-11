@@ -273,7 +273,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     # Build nxm matrix (n samples, m genes)
     X = df[genes_list].as_matrix()
     
-    Z = linkage(X, method='single', metric='hamming')
+    Z = linkage(X, method='complete', metric='hamming')
     c, coph_dists = cophenet(Z, pdist(X))
     print "Cophenetic Correlation Coefficient:", c
     

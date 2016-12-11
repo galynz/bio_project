@@ -169,7 +169,7 @@ def parse_vcf(vcf_path, samples_dict, vcf_list_file):
                         return
                 elif line.startswith("##gdcWorkflow") and line.find("mutect2") == -1:
                     return
-            vcf_list_file.write(vcf_path + "\n")
+#            vcf_list_file.write(vcf_path + "\n")
             logger.debug("went over %d lines in file %s", n, vcf_path)
     except IOError:
         logger.exception("can't read %s", vcf_path)
@@ -272,20 +272,20 @@ def plot_heatmap(samples_dict, output_path, cancer, df, genes):
 def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     # Build nxm matrix (n samples, m genes)
     X = df[genes_list].as_matrix().transpose()
-    print X.shape
     
     Z = linkage(X, method='complete', metric='hamming')
     c, coph_dists = cophenet(Z, pdist(X))
     print "Cophenetic Correlation Coefficient:", c
     
     #layout = go.Layout(yaxis=dict(title='%s germline mutations (ordered by samples somatic mutation load)'% cancer, zeroline=False))    
-    fig = pylab.figure(figsize=(8,8))
-    ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
-    ax1.set_xticks([])
-    ax1.set_yticks([])
-    axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
+#    fig = pylab.figure(figsize=(8,8))
+#    ax1 = fig.add_axes([0.09,0.1,0.2,0.6])
+#    ax1.set_xticks([])
+#    ax1.set_yticks([])
+#    axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
     den = dendrogram(Z, orientation='left')
     idx = den['leaves']
+    open("tmp.txt", "wb").write(idx)
     X = X[idx,:]
     
 #    im = axmatrix.matshow(X, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)

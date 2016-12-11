@@ -395,7 +395,7 @@ def main():
     df, all_genes = create_df(samples_dict, 'germline_binary')
     print len(all_genes)
     plot_heatmap_top_low_unique(samples_dict, options.output_path, options.cancer, df, all_genes)
-    plot_heatmap_var(samples_dict, options.output_path, options.cancer, df, all_genes)
+#    plot_heatmap_var(samples_dict, options.output_path, options.cancer, df, all_genes)
     
 if __name__ == "__main__":
     main()

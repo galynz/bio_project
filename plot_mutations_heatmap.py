@@ -287,7 +287,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     idx = den['leaves']
     X = X[idx,:]
     print "X shape:", X.shape
-    genes_ordered = [gene_list[i] for i in ids]
+    genes_ordered = [gene_list[i] for i in idx]
     logger.info("ordered genes: %s", str(genes_ordered))
     
 #    im = axmatrix.matshow(X, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)

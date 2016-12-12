@@ -431,7 +431,7 @@ def main():
     
     # Creating a counter df (germline mutations per gene) and heatmaps
     counter_df, all_genes = create_df(samples_dict, 'germline_count')
-    plot_heatmap_top_low_unique(samples_dict, options.output_path + ".counter", options.cancer, df, all_genes, scale='logarithmic')
+    plot_heatmap_top_low_unique(samples_dict, options.output_path + ".counter", options.cancer, counter_df, all_genes, scale='logarithmic')
     
 if __name__ == "__main__":
     main()

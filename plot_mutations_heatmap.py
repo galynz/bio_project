@@ -135,7 +135,7 @@ class Sample(object):
         return 1
         
         
-def parse_vcf(vcf_path, samples_dict, vcf_list_file):
+def parse_vcf(vcf_path, samples_dict):#, vcf_list_file):
     try:
         with gzip.open(vcf_path) as f:
             fields = []
@@ -169,7 +169,7 @@ def parse_vcf(vcf_path, samples_dict, vcf_list_file):
                         return
                 elif line.startswith("##gdcWorkflow") and line.find("mutect2") == -1:
                     return
-            vcf_list_file.write(vcf_path + "\n")
+#            vcf_list_file.write(vcf_path + "\n")
             logger.debug("went over %d lines in file %s", n, vcf_path)
     except IOError:
         logger.exception("can't read %s", vcf_path)
@@ -285,8 +285,10 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
 #    axmatrix = fig.add_axes([0.3,0.1,0.6,0.6])
     den = dendrogram(Z, orientation='left')
     idx = den['leaves']
-    open("tmp.txt", "wb").write(str(idx))
     X = X[idx,:]
+    print "X shape:", X.shape
+    genes_ordered = [gene_list[i] for i in ids]
+    logger.info("ordered genes: %s", str(genes_ordered))
     
 #    im = axmatrix.matshow(X, aspect='auto', origin='lower', cmap=pylab.cm.YlGnBu)
 #    axmatrix.set_xticks([])
@@ -297,7 +299,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
 #    fig.savefig(output_path)
     
     # Plotting the heatmap (without the hirarchy)
-    heatmap_trace = go.Heatmap(z=X.transpose(), x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
+    heatmap_trace = go.Heatmap(z=X.tolist(), x=df.patient_id, y=genes_ordered, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
     mutation_load_trace = go.Bar(x=df.patient_id, y=df.somatic_mutations_count/30.0)
     fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)
     fig.append_trace(mutation_load_trace, 1, 1)
@@ -308,7 +310,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
     fig['layout']['xaxis2'].update(showticklabels = False)
     fig['layout']['xaxis2'].update(zeroline = False, showgrid=False)
     fig['layout']['yaxis2'].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
-    plot(fig, auto_open=False, filename="%s_%s_heatmap2.html" % (output_path, cancer))
+    plot(fig, auto_open=False, filename="%s_%s_heatmap_clustered.html" % (output_path, cancer))
     
     
 def pyplot(fig, output_path, ci=False, legend=True):
@@ -388,9 +390,10 @@ def main():
         add_csv_data(csv_path, samples_dict)
         
     logger.info("parsing vcf files")
-    vcf_list_file = open("vcf_files.txt", "wb")
+#    vcf_list_file = open("vcf_files.txt", "wb")
     for vcf_path in vcf_paths:
-        parse_vcf(vcf_path, samples_dict, vcf_list_file)
+#        parse_vcf(vcf_path, samples_dict, vcf_list_file)
+        parse_vcf(vcf_path, samples_dict)
 
     df, all_genes = create_df(samples_dict, 'germline_binary')
     print len(all_genes)

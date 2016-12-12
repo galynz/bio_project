@@ -293,7 +293,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path, scale='binary'):
         colorbar = {'tick0': 0,'dtick': 1}
     elif scale == 'logarithmic':
         Z = linkage(X, method='ward')
-        X_max = max(X.max())
+        X_max = X.max()
         colorscale = [[0, 'rgb(250, 250, 250)'],
                       [1./X_max, 'rgb(200, 200, 200)'],
                       [5./X_max, 'rgb(200, 150, 150)'],
@@ -425,9 +425,9 @@ def main():
         parse_vcf(vcf_path, samples_dict)
 
     # Creating a binary df and heatmaps
-    df, all_genes = create_df(samples_dict, 'germline_binary')
-    print len(all_genes)
-    plot_heatmap_top_low_unique(samples_dict, options.output_path, options.cancer, df, all_genes)
+#    df, all_genes = create_df(samples_dict, 'germline_binary')
+#    print len(all_genes)
+#    plot_heatmap_top_low_unique(samples_dict, options.output_path, options.cancer, df, all_genes)
 #    plot_heatmap_var(samples_dict, options.output_path, options.cancer, df, all_genes)
     
     # Creating a counter df (germline mutations per gene) and heatmaps

@@ -34,33 +34,33 @@ logger = logging.getLogger("mutations_heatmap")
 
 FRACTION = 0.15
 
-BIOTYPE_PRIORITY = {'protein_coding' : 1, # Contains an open reading frame (ORF)
-                    'LRG_gene' : 2, # Gene in a "Locus Reference Genomic" region known to have disease-related sequence variations
-                    'IG_C_gene' : 2, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
-                    'IG_D_gene' : 2, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
-                    'IG_J_gene' : 2, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
-                    'IG_LV_gene' : 2, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
-                    'IG_V_gene' : 2, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
-                    'TR_C_gene' : 2, # T-cell receptor (TcR) genes imported or annotated according to the IMGT
-                    'TR_D_gene' : 2, # T-cell receptor (TcR) genes imported or annotated according to the IMGT
-                    'TR_J_gene' : 2, # T-cell receptor (TcR) genes imported or annotated according to the IMGT
-                    'TR_V_gene' : 2, # T-cell receptor (TcR) genes imported or annotated according to the IMGT
-                    'miRNA' : 3, # Non-coding RNA predicted using sequences from RFAM and miRBase
-                    'snRNA' : 3, # Non-coding RNA predicted using sequences from RFAM and miRBase
-                    'snoRNA' : 3, # Non-coding RNA predicted using sequences from RFAM and miRBase
-                    'ribozyme' : 3, # Non-coding RNA predicted using sequences from RFAM and miRBase
-                    'tRNA' : 3, #Added by Y. Boursin
-                    'sRNA' : 3, # Non-coding RNA predicted using sequences from RFAM and miRBase
-                    'scaRNA' : 3, # Non-coding RNA predicted using sequences from RFAM and miRBase
-                    'rRNA' : 3, # Non-coding RNA predicted using sequences from RFAM and miRBase
-                    'lincRNA' : 3, # Long, intervening noncoding (linc) RNAs, that can be found in evolutionarily conserved, intergenic regions
-                    'bidirectional_promoter_lncrna' : 3, # A non-coding locus that originates from within the promoter region of a protein-coding gene, with transcription proceeding in the opposite direction on the other strand
-                    'bidirectional_promoter_lncRNA' : 3, # A non-coding locus that originates from within the promoter region of a protein-coding gene, with transcription proceeding in the opposite direction on the other strand
-                    'known_ncrna' : 4,
-                    'vaultRNA' : 4, # Short non coding RNA genes that form part of the vault ribonucleoprotein complex
-                    'macro_lncRNA' : 4, # unspliced lncRNAs that are several kb in size
-                    'Mt_tRNA' : 4, # Non-coding RNA predicted using sequences from RFAM and miRBase
-                    'Mt_rRNA' : 4, # Non-coding RNA predicted using sequences from RFAM and miRBase
+BIOTYPE_PRIORITY = {'protein_coding' : 9, # Contains an open reading frame (ORF)
+                    'LRG_gene' : 8, # Gene in a "Locus Reference Genomic" region known to have disease-related sequence variations
+                    'IG_C_gene' : 8, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
+                    'IG_D_gene' : 8, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
+                    'IG_J_gene' : 8, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
+                    'IG_LV_gene' : 8, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
+                    'IG_V_gene' : 8, # Immunoglobulin (Ig) variable chain genes imported or annotated according to the IMGT
+                    'TR_C_gene' : 8, # T-cell receptor (TcR) genes imported or annotated according to the IMGT
+                    'TR_D_gene' : 8, # T-cell receptor (TcR) genes imported or annotated according to the IMGT
+                    'TR_J_gene' : 8, # T-cell receptor (TcR) genes imported or annotated according to the IMGT
+                    'TR_V_gene' : 8, # T-cell receptor (TcR) genes imported or annotated according to the IMGT
+                    'miRNA' : 7, # Non-coding RNA predicted using sequences from RFAM and miRBase
+                    'snRNA' : 7, # Non-coding RNA predicted using sequences from RFAM and miRBase
+                    'snoRNA' : 7, # Non-coding RNA predicted using sequences from RFAM and miRBase
+                    'ribozyme' : 7, # Non-coding RNA predicted using sequences from RFAM and miRBase
+                    'tRNA' : 7, #Added by Y. Boursin
+                    'sRNA' : 7, # Non-coding RNA predicted using sequences from RFAM and miRBase
+                    'scaRNA' : 7, # Non-coding RNA predicted using sequences from RFAM and miRBase
+                    'rRNA' : 7, # Non-coding RNA predicted using sequences from RFAM and miRBase
+                    'lincRNA' : 7, # Long, intervening noncoding (linc) RNAs, that can be found in evolutionarily conserved, intergenic regions
+                    'bidirectional_promoter_lncrna' : 7, # A non-coding locus that originates from within the promoter region of a protein-coding gene, with transcription proceeding in the opposite direction on the other strand
+                    'bidirectional_promoter_lncRNA' : 7, # A non-coding locus that originates from within the promoter region of a protein-coding gene, with transcription proceeding in the opposite direction on the other strand
+                    'known_ncrna' : 6,
+                    'vaultRNA' : 6, # Short non coding RNA genes that form part of the vault ribonucleoprotein complex
+                    'macro_lncRNA' : 6, # unspliced lncRNAs that are several kb in size
+                    'Mt_tRNA' : 6, # Non-coding RNA predicted using sequences from RFAM and miRBase
+                    'Mt_rRNA' : 6, # Non-coding RNA predicted using sequences from RFAM and miRBase
                     'antisense' : 5, # Has transcripts that overlap the genomic span (i.e. exon or introns) of a protein-coding locus on the opposite strand
                     'antisense_RNA' : 5, # Alias for antisense (Y. Boursin)
                     'sense_intronic' : 5, # Long non-coding transcript in introns of a coding gene that does not overlap any exons
@@ -69,46 +69,46 @@ BIOTYPE_PRIORITY = {'protein_coding' : 1, # Contains an open reading frame (ORF)
                     '3prime_overlapping_ncRNA' : 5, # Transcripts where ditag and/or published experimental data strongly supports the existence of short non-coding transcripts transcribed from the 3'UTR
                     'misc_RNA' : 5, # Non-coding RNA predicted using sequences from RFAM and miRBase
                     'non_coding' : 5, # Transcript which is known from the literature to not be protein coding
-                    'regulatory_region' : 6, # A region of sequence that is involved in the control of a biological process
-                    'disrupted_domain' : 6, # Otherwise viable coding region omitted from this alternatively spliced transcript because the splice variation affects a region coding for a protein domain
-                    'processed_transcript' : 6, # Doesn't contain an ORF
-                    'TEC' : 6, # To be Experimentally Confirmed. This is used for non-spliced EST clusters that have polyA features. This category has been specifically created for the ENCODE project to highlight regions that could indicate the presence of protein coding genes that require experimental validation, either by 5' RACE or RT-PCR to extend the transcripts, or by confirming expression of the putatively-encoded peptide with specific antibodies
-                    'TF_binding_site' : 7, # A region of a nucleotide molecule that binds a Transcription Factor or Transcription Factor complex
-                    'CTCF_binding_site' :7, # A transcription factor binding site with consensus sequence CCGCGNGGNGGCAG, bound by CCCTF-binding factor
-                    'promoter_flanking_region' : 7, # A region immediately adjacent to a promoter which may or may not contain transcription factor binding sites
-                    'enhancer' : 7, # A cis-acting sequence that increases the utilization of (some) eukaryotic promoters, and can function in either orientation and in any location (upstream or downstream) relative to the promoter
-                    'promoter' : 7, # A regulatory_region composed of the TSS(s) and binding sites for TF_complexes of the basal transcription machinery
-                    'open_chromatin_region' : 7, # A DNA sequence that in the normal state of the chromosome corresponds to an unfolded, un-complexed stretch of double-stranded DNA
-                    'retained_intron' : 7, # Alternatively spliced transcript believed to contain intronic sequence relative to other, coding, variants
-                    'nonsense_mediated_decay' : 7, # If the coding sequence (following the appropriate reference) of a transcript finishes >50bp from a downstream splice site then it is tagged as NMD. If the variant does not cover the full reference coding sequence then it is annotated as NMD if NMD is unavoidable i.e. no matter what the exon structure of the missing portion is the transcript will be subject to NMD
-                    'non_stop_decay' : 7, # Transcripts that have polyA features (including signal) without a prior stop codon in the CDS, i.e. a non-genomic polyA tail attached directly to the CDS without 3' UTR. These transcripts are subject to degradation
-                    'ambiguous_orf' : 7, # Transcript believed to be protein coding, but with more than one possible open reading frame
-                    'pseudogene' : 8, # Have homology to proteins but generally suffer from a disrupted coding sequence and an active homologous gene can be found at another locus. Sometimes these entries have an intact coding sequence or an open but truncated ORF, in which case there is other evidence used (for example genomic polyA stretches at the 3' end) to classify them as a pseudogene. Can be further classified as one of the following
-                    'processed_pseudogene' : 8, # Pseudogene that lack introns and is thought to arise from reverse transcription of mRNA followed by reinsertion of DNA into the genome
-                    'polymorphic_pseudogene' : 8, # Pseudogene owing to a SNP/DIP but in other individuals/haplotypes/strains the gene is translated
-                    'retrotransposed' : 8, # Pseudogene owing to a reverse transcribed and re-inserted sequence
-                    'translated_processed_pseudogene' : 8, # Pseudogenes that have mass spec data suggesting that they are also translated
-                    'translated_unprocessed_pseudogene' : 8, # Pseudogenes that have mass spec data suggesting that they are also translated
-                    'transcribed_processed_pseudogene' : 8, # Pseudogene where protein homology or genomic structure indicates a pseudogene, but the presence of locus-specific transcripts indicates expression
-                    'transcribed_unprocessed_pseudogene' : 8, # Pseudogene where protein homology or genomic structure indicates a pseudogene, but the presence of locus-specific transcripts indicates expression
-                    'transcribed_unitary_pseudogene' : 8, #Pseudogene where protein homology or genomic structure indicates a pseudogene, but the presence of locus-specific transcripts indicates expression
-                    'unitary_pseudogene' : 8, # A species specific unprocessed pseudogene without a parent gene, as it has an active orthologue in another species
-                    'unprocessed_pseudogene' : 8, # Pseudogene that can contain introns since produced by gene duplication
-                    'Mt_tRNA_pseudogene' : 8, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
-                    'tRNA_pseudogene' : 8, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
-                    'snoRNA_pseudogene' : 8, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
-                    'snRNA_pseudogene' : 8, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
-                    'scRNA_pseudogene' : 8, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
-                    'rRNA_pseudogene' : 8, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
-                    'misc_RNA_pseudogene' : 8, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
-                    'miRNA_pseudogene' : 8, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
-                    'IG_C_pseudogene' : 8, # Inactivated immunoglobulin gene
-                    'IG_D_pseudogene' : 8, # Inactivated immunoglobulin gene
-                    'IG_J_pseudogene' : 8, # Inactivated immunoglobulin gene
-                    'IG_V_pseudogene' : 8, # Inactivated immunoglobulin gene
-                    'TR_J_pseudogene' : 8, # Inactivated immunoglobulin gene
-                    'TR_V_pseudogene' : 8, # Inactivated immunoglobulin gene
-                    'artifact' : 9, # Used to tag mistakes in the public databases (Ensembl/SwissProt/Trembl)
+                    'regulatory_region' : 4, # A region of sequence that is involved in the control of a biological process
+                    'disrupted_domain' : 4, # Otherwise viable coding region omitted from this alternatively spliced transcript because the splice variation affects a region coding for a protein domain
+                    'processed_transcript' : 4, # Doesn't contain an ORF
+                    'TEC' : 4, # To be Experimentally Confirmed. This is used for non-spliced EST clusters that have polyA features. This category has been specifically created for the ENCODE project to highlight regions that could indicate the presence of protein coding genes that require experimental validation, either by 5' RACE or RT-PCR to extend the transcripts, or by confirming expression of the putatively-encoded peptide with specific antibodies
+                    'TF_binding_site' : 3, # A region of a nucleotide molecule that binds a Transcription Factor or Transcription Factor complex
+                    'CTCF_binding_site' : 3, # A transcription factor binding site with consensus sequence CCGCGNGGNGGCAG, bound by CCCTF-binding factor
+                    'promoter_flanking_region' : 3, # A region immediately adjacent to a promoter which may or may not contain transcription factor binding sites
+                    'enhancer' : 3, # A cis-acting sequence that increases the utilization of (some) eukaryotic promoters, and can function in either orientation and in any location (upstream or downstream) relative to the promoter
+                    'promoter' : 3, # A regulatory_region composed of the TSS(s) and binding sites for TF_complexes of the basal transcription machinery
+                    'open_chromatin_region' : 3, # A DNA sequence that in the normal state of the chromosome corresponds to an unfolded, un-complexed stretch of double-stranded DNA
+                    'retained_intron' : 3, # Alternatively spliced transcript believed to contain intronic sequence relative to other, coding, variants
+                    'nonsense_mediated_decay' : 3, # If the coding sequence (following the appropriate reference) of a transcript finishes >50bp from a downstream splice site then it is tagged as NMD. If the variant does not cover the full reference coding sequence then it is annotated as NMD if NMD is unavoidable i.e. no matter what the exon structure of the missing portion is the transcript will be subject to NMD
+                    'non_stop_decay' : 3, # Transcripts that have polyA features (including signal) without a prior stop codon in the CDS, i.e. a non-genomic polyA tail attached directly to the CDS without 3' UTR. These transcripts are subject to degradation
+                    'ambiguous_orf' : 3, # Transcript believed to be protein coding, but with more than one possible open reading frame
+                    'pseudogene' : 2, # Have homology to proteins but generally suffer from a disrupted coding sequence and an active homologous gene can be found at another locus. Sometimes these entries have an intact coding sequence or an open but truncated ORF, in which case there is other evidence used (for example genomic polyA stretches at the 3' end) to classify them as a pseudogene. Can be further classified as one of the following
+                    'processed_pseudogene' : 2, # Pseudogene that lack introns and is thought to arise from reverse transcription of mRNA followed by reinsertion of DNA into the genome
+                    'polymorphic_pseudogene' : 2, # Pseudogene owing to a SNP/DIP but in other individuals/haplotypes/strains the gene is translated
+                    'retrotransposed' : 2, # Pseudogene owing to a reverse transcribed and re-inserted sequence
+                    'translated_processed_pseudogene' : 2, # Pseudogenes that have mass spec data suggesting that they are also translated
+                    'translated_unprocessed_pseudogene' : 2, # Pseudogenes that have mass spec data suggesting that they are also translated
+                    'transcribed_processed_pseudogene' : 2, # Pseudogene where protein homology or genomic structure indicates a pseudogene, but the presence of locus-specific transcripts indicates expression
+                    'transcribed_unprocessed_pseudogene' : 2, # Pseudogene where protein homology or genomic structure indicates a pseudogene, but the presence of locus-specific transcripts indicates expression
+                    'transcribed_unitary_pseudogene' : 2, #Pseudogene where protein homology or genomic structure indicates a pseudogene, but the presence of locus-specific transcripts indicates expression
+                    'unitary_pseudogene' : 2, # A species specific unprocessed pseudogene without a parent gene, as it has an active orthologue in another species
+                    'unprocessed_pseudogene' : 2, # Pseudogene that can contain introns since produced by gene duplication
+                    'Mt_tRNA_pseudogene' : 2, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
+                    'tRNA_pseudogene' : 2, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
+                    'snoRNA_pseudogene' : 2, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
+                    'snRNA_pseudogene' : 2, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
+                    'scRNA_pseudogene' : 2, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
+                    'rRNA_pseudogene' : 2, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
+                    'misc_RNA_pseudogene' : 2, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
+                    'miRNA_pseudogene' : 2, # Non-coding RNAs predicted to be pseudogenes by the Ensembl pipeline
+                    'IG_C_pseudogene' : 2, # Inactivated immunoglobulin gene
+                    'IG_D_pseudogene' : 2, # Inactivated immunoglobulin gene
+                    'IG_J_pseudogene' : 2, # Inactivated immunoglobulin gene
+                    'IG_V_pseudogene' : 2, # Inactivated immunoglobulin gene
+                    'TR_J_pseudogene' : 2, # Inactivated immunoglobulin gene
+                    'TR_V_pseudogene' : 2, # Inactivated immunoglobulin gene
+                    'artifact' : 1, # Used to tag mistakes in the public databases (Ensembl/SwissProt/Trembl)
     }
 
 class Sample(object):
@@ -118,7 +118,7 @@ class Sample(object):
         self.somatic_mutations = set()
         
     def add_germline_mutation(self, gene, mutation_priority):
-        self.germline_mutations[gene] = {'severity' : min(mutation_priority, self.germline_mutations.get(gene, {}).get('severity', 10)), 
+        self.germline_mutations[gene] = {'severity' : max(mutation_priority, self.germline_mutations.get(gene, {}).get('severity', 0)), 
                                         'count' : self.germline_mutations.get(gene, {}).get('count', 0) + 1}
         
     def add_somatic_mutation(self, gene):
@@ -213,7 +213,7 @@ def create_df(samples_dict, z_param):
     l = []
     for sample in samples_dict.values():
         if z_param == 'severity':
-            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [-1*sample.germline_mutations.get(i, 10) for i in all_genes]
+            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.germline_mutations.get(i, 0) for i in all_genes]
         elif z_param == 'germline_count':
             l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.count_germline_mutations(i) for i in all_genes]
         elif z_param == 'germline_binary':
@@ -296,13 +296,13 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path, scale='binary'):
         X_max = X.max()
         colorscale = [[0, 'rgb(250, 250, 250)'],
                       [1./X_max, 'rgb(200, 200, 200)'],
-                      [5./X_max, 'rgb(200, 150, 150)'],
-                      [10./X_max, 'rgb(200, 100, 100)'],
-                      [100./X_max, 'rgb(200, 50, 50)'],
-                      [1., 'rgb(0, 0, 0)']]
+                      [5./X_max, 'rgb(150, 150, 200)'],
+                      [20./X_max, 'rgb(100, 100, 200)'],
+                      [100./X_max, 'rgb(50, 50, 200)'],
+                      [1., 'rgb(0, 0, 200)']]
         colorbar = {'tick0': 0,
                     'tickmode': 'array',
-                    'tickvals': [0, 1, 5, 10, 100, X_max]}
+                    'tickvals': [0, 1, 5, 20, 100, X_max]}
     c, coph_dists = cophenet(Z, pdist(X))
     print "Cophenetic Correlation Coefficient:", c
     
@@ -433,6 +433,9 @@ def main():
     # Creating a counter df (germline mutations per gene) and heatmaps
     counter_df, all_genes = create_df(samples_dict, 'germline_count')
     plot_heatmap_top_low_unique(samples_dict, options.output_path + ".counter", options.cancer, counter_df, all_genes, scale='logarithmic')
+    
+    severity_df, all_genes = create_df(samples_dict, 'severity')
+    plot_heatmap_top_low_unique(samples_dict, options.output_path + ".severity", options.cancer, severity_df, all_genes)
     
 if __name__ == "__main__":
     main()

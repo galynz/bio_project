@@ -129,10 +129,9 @@ class Sample(object):
     
     def count_germline_mutations(self, gene):
         return self.germline_mutations.get(gene, {}).get('count', 0)
-        
-        if self.germline_mutations.get(gene, {}).get('count', 0) == 0:
-            return 0
-        return 1
+    
+    def check_germline_mutation_severity(self, gene):
+        return self.germline_mutations.get(gene, {}).get('severity', 0)
         
         
 def parse_vcf(vcf_path, samples_dict):#, vcf_list_file):
@@ -213,7 +212,7 @@ def create_df(samples_dict, z_param):
     l = []
     for sample in samples_dict.values():
         if z_param == 'severity':
-            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.germline_mutations.get(i, 0) for i in all_genes]
+            l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.check_germline_mutation_severity(i) for i in all_genes]
         elif z_param == 'germline_count':
             l_sample = [sample.count_somatic_mutations(), sample.patient_id] + [sample.count_germline_mutations(i) for i in all_genes]
         elif z_param == 'germline_binary':

@@ -252,9 +252,23 @@ def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes
     logger.info("top_genes: %d, low_genes: %d, all_genes: %d", len(top_genes), len(low_genes), len(all_genes))
     plot_heatmap(samples_dict, output_path + ".top_low_genes", cancer, df, top_genes+low_genes)
         
-def plot_heatmap(samples_dict, output_path, cancer, df, genes):
+def plot_heatmap(samples_dict, output_path, cancer, df, genes, scale='binary'):
     # Plotting the heatmap
-    heatmap_trace = go.Heatmap(z=[df[i] for i in genes], y=genes, x=df.patient_id, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
+    if scale == 'binary':
+        colorscale = [[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]]
+        colorbar = {'tick0': 0,'dtick': 1}
+    elif scale == 'logarithmic':
+        colorscale = [[0, 'rgb(250, 250, 250)'],
+                      [1./(4**4), 'rgb(200, 200, 200)'],
+                      [1./(4**3), 'rgb(150, 150, 150)'],
+                      [1./(4**2), 'rgb(100, 100, 100)'],
+                      [1./4, 'rgb(50, 50, 50)'],
+                      [1., 'rgb(0, 0, 0)']]
+        colorbar = {'tick0': 0,
+                    'tickmode': 'array',
+                    'tickvals': [0, 4, 16, 64, 256]}
+        
+    heatmap_trace = go.Heatmap(z=[df[i] for i in genes], y=genes, x=df.patient_id, showscale=True, colorscale=colorscale, colorbar=colorbar)
     mutation_load_trace = go.Bar(x=df.patient_id, y=df.somatic_mutations_count/30.0)
     fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)
     fig.append_trace(mutation_load_trace, 1, 1)
@@ -267,13 +281,27 @@ def plot_heatmap(samples_dict, output_path, cancer, df, genes):
     fig['layout']['yaxis2'].update(zeroline = False, showgrid = False, tickfont=dict(family='Arial', size=4))
     plot(fig, auto_open=False, filename="%s_%s_heatmap.html" % (output_path, cancer))
     
-    plot_clustered_heatmap(df, genes, cancer, output_path)
+    plot_clustered_heatmap(df, genes, cancer, output_path, scale)
     
-def plot_clustered_heatmap(df, genes_list, cancer, output_path):
+def plot_clustered_heatmap(df, genes_list, cancer, output_path, scale='binary'):
     # Build nxm matrix (n samples, m genes)
     X = df[genes_list].as_matrix().transpose()
     
-    Z = linkage(X, method='complete', metric='hamming')
+    if scale == 'binary':
+        Z = linkage(X, method='complete', metric='hamming')
+        colorscale = [[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]]
+        colorbar = {'tick0': 0,'dtick': 1}
+    elif scale == 'logarithmic':
+        Z = linkage(X, method='ward')
+        colorscale = [[0, 'rgb(250, 250, 250)'],
+                      [1./(4**4), 'rgb(200, 200, 200)'],
+                      [1./(4**3), 'rgb(150, 150, 150)'],
+                      [1./(4**2), 'rgb(100, 100, 100)'],
+                      [1./4, 'rgb(50, 50, 50)'],
+                      [1., 'rgb(0, 0, 0)']]
+        colorbar = {'tick0': 0,
+                    'tickmode': 'array',
+                    'tickvals': [0, 4, 16, 64, 256]}
     c, coph_dists = cophenet(Z, pdist(X))
     print "Cophenetic Correlation Coefficient:", c
     
@@ -299,7 +327,7 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path):
 #    fig.savefig(output_path)
     
     # Plotting the heatmap (without the hirarchy)
-    heatmap_trace = go.Heatmap(z=X.tolist(), x=df.patient_id, y=genes_ordered, showscale=False, colorscale=[[0, "rgb(111, 168, 220)"], [1, "rgb(5, 10, 172)"]])
+    heatmap_trace = go.Heatmap(z=X.tolist(), x=df.patient_id, y=genes_ordered, showscale=True, colorscale=colorscale, colorbar=colorbar)
     mutation_load_trace = go.Bar(x=df.patient_id, y=df.somatic_mutations_count/30.0)
     fig = tls.make_subplots(rows=29, cols=1, specs=[[{'rowspan':5, 'colspan' : 1}]] + [[None]] * 4 + [[{'rowspan' : 24, 'colspan' : 1}]] + [[None]] * 23)
     fig.append_trace(mutation_load_trace, 1, 1)
@@ -395,10 +423,15 @@ def main():
 #        parse_vcf(vcf_path, samples_dict, vcf_list_file)
         parse_vcf(vcf_path, samples_dict)
 
+    # Creating a binary df and heatmaps
     df, all_genes = create_df(samples_dict, 'germline_binary')
     print len(all_genes)
     plot_heatmap_top_low_unique(samples_dict, options.output_path, options.cancer, df, all_genes)
 #    plot_heatmap_var(samples_dict, options.output_path, options.cancer, df, all_genes)
+    
+    # Creating a counter df (germline mutations per gene) and heatmaps
+    counter_df, all_genes = create_df(samples_dict, 'germline_count')
+    plot_heatmap_top_low_unique(samples_dict, options.output_path + ".counter", options.cancer, df, all_genes, scale='logarithmic')
     
 if __name__ == "__main__":
     main()

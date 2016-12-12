@@ -293,15 +293,16 @@ def plot_clustered_heatmap(df, genes_list, cancer, output_path, scale='binary'):
         colorbar = {'tick0': 0,'dtick': 1}
     elif scale == 'logarithmic':
         Z = linkage(X, method='ward')
+        X_max = max(X.max())
         colorscale = [[0, 'rgb(250, 250, 250)'],
-                      [1./(4**4), 'rgb(200, 200, 200)'],
-                      [1./(4**3), 'rgb(150, 150, 150)'],
-                      [1./(4**2), 'rgb(100, 100, 100)'],
-                      [1./4, 'rgb(50, 50, 50)'],
+                      [1./X_max, 'rgb(200, 200, 200)'],
+                      [5./X_max, 'rgb(200, 150, 150)'],
+                      [10./X_max, 'rgb(200, 100, 100)'],
+                      [100./X_max, 'rgb(200, 50, 50)'],
                       [1., 'rgb(0, 0, 0)']]
         colorbar = {'tick0': 0,
                     'tickmode': 'array',
-                    'tickvals': [0, 4, 16, 64, 256]}
+                    'tickvals': [0, 1, 5, 10, 100, X_max]}
     c, coph_dists = cophenet(Z, pdist(X))
     print "Cophenetic Correlation Coefficient:", c
     

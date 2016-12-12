@@ -236,7 +236,7 @@ def plot_heatmap_var(samples_dict, output_path, cancer, df, all_genes):
     plot_heatmap(samples_dict, output_path + ".top_var_genes", cancer, df, top_genes)
     
     
-def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes):
+def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes, scale='binary'):
     #top mutation load patients genes
     top_mutation_load_patients_ix = (df["somatic_mutations_count"] >= df["somatic_mutations_count"].quantile(1-FRACTION))
     top_mutation_load_df = df[top_mutation_load_patients_ix]
@@ -250,7 +250,7 @@ def plot_heatmap_top_low_unique(samples_dict, output_path, cancer, df, all_genes
         elif top_mutation_load_df[gene].sum() == 0 and low_mutation_load_df[gene].sum() > 0:
             low_genes.append(gene)
     logger.info("top_genes: %d, low_genes: %d, all_genes: %d", len(top_genes), len(low_genes), len(all_genes))
-    plot_heatmap(samples_dict, output_path + ".top_low_genes", cancer, df, top_genes+low_genes)
+    plot_heatmap(samples_dict, output_path + ".top_low_genes", cancer, df, top_genes+low_genes, scale)
         
 def plot_heatmap(samples_dict, output_path, cancer, df, genes, scale='binary'):
     # Plotting the heatmap

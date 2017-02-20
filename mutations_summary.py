@@ -545,7 +545,7 @@ class MutationsSummary(object):
                                                      "Random_mutated", "Special_group",
                                                      "Age", "Gender", "Stage", "HR_germline", 
                                                      "random_germline"] + list (DNA_DEFICIENT_GENES) +
-                                                     ["_".join(gene, "germline") for i in DNA_DEFICIENT_GENES])
+                                                     ["_".join(gene, "germline") for gene in DNA_DEFICIENT_GENES])
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()

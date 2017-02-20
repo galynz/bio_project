@@ -1149,7 +1149,7 @@ def main():
     summary.plot_mutation_load_box("%s.mutation_load" % options.output_path, options.cancer, False, mutation_types, somatic_only=True)
     #summary.plot_hot_spot_box("%s.hot_spot" % options.output_path, options.cancer, mutation_type=mutation_types)
     #summary.plot_survival("%s.survival" % options.output_path, options.cancer, mutation_types)
-    summary.plot_heatmap(mutation_types, options.output_path)
+    #summary.plot_heatmap(mutation_types, options.output_path)
     
     
 #    if options.cancer == 'Breast_Invasive_Carcinoma':

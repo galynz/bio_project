@@ -38,6 +38,9 @@ rcParams['figure.figsize']=10, 5
 
 #init_notebook_mode()
 
+DNA_REPAIR_GENES_PATH = "DNA_repair_genes.txt"
+DNA_DEFICIENT_GENES = open(DNA_REPAIR_GENES_PATH, "rb").read().split()
+
 HR_DEFICIENT_GENES = ("ATM", "ATRX", "BRIP1", "CHEK2", "FANCA", "FANCC", "BRCA1","BRCA2",
                       "FANCD2", "FANCE", "FANCF","FANCG", "NBN", "PTEN", "U2AF1", "ATR")
 
@@ -497,8 +500,8 @@ class MutationsSummary(object):
     def create_survival_df(self, mutation_type):
         self.find_high_low_mutation_load_patients(mutation_type)        
         l = []
-        #hr_order = {gene : 0 for gene in HR_DEFICIENT_GENES}
-        hr_order = {gene : 0 for gene in HR_DEFICIENT_GENES + NER_DEFICIENT_GENES + MMR_DEFICIENT_GENES}
+        hr_order = {gene : 0 for gene in DNA_DEFICIENT_GENES}
+        #hr_order = {gene : 0 for gene in HR_DEFICIENT_GENES + NER_DEFICIENT_GENES + MMR_DEFICIENT_GENES}
         for key, i in self.ids_dict.items():
             if not i.clinical_available:
                 pass
@@ -521,8 +524,8 @@ class MutationsSummary(object):
                         data.append(gene_mutations)
                 
             l.append(tuple(data))
-        #df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES))
-        df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES + NER_DEFICIENT_GENES + MMR_DEFICIENT_GENES))
+        df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(DNA_DEFICIENT_GENES))
+        #df = pd.DataFrame(data=l, columns=["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + list(HR_DEFICIENT_GENES + NER_DEFICIENT_GENES + MMR_DEFICIENT_GENES))
         self.hr_genes_order = [i[0] for i in sorted(hr_order.items(), key=lambda x: x[1])]
         columns_order = ["days", "dead", 'HR', 'NER', 'MMR','top_mutation_load','low_mutation_load', 'mutation_load_group', 'age', 'gender', 'mutation_load', 'stage', 'special_group', "HR_count", "sample_barcode"] + self.hr_genes_order
         self.survival_df = df.reindex_axis(columns_order, axis=1)
@@ -541,7 +544,7 @@ class MutationsSummary(object):
                                                      "HR_mutated", "NER_mutated", "MMR_mutated", 
                                                      "Random_mutated", "Special_group",
                                                      "Age", "Gender", "Stage", "HR_germline", 
-                                                     "random_germline"] + list (HR_DEFICIENT_GENES))
+                                                     "random_germline"] + list (DNA_DEFICIENT_GENES))
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()
@@ -580,7 +583,7 @@ class MutationsSummary(object):
                 row_dict["Stage"] = sample.stage
                 row_dict["HR_germline"] = sample.hr_deficient.get('germline', 0)
                 row_dict["random_germline"] = sample.random_deficient.get('germline', 0)
-                for gene in HR_DEFICIENT_GENES:
+                for gene in DNA_DEFICIENT_GENES:
                     if sample.get_gene_mutations(gene, False, mutation_type):
                         row_dict[gene] = True
                     else:

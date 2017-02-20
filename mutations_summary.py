@@ -544,7 +544,8 @@ class MutationsSummary(object):
                                                      "HR_mutated", "NER_mutated", "MMR_mutated", 
                                                      "Random_mutated", "Special_group",
                                                      "Age", "Gender", "Stage", "HR_germline", 
-                                                     "random_germline"] + list (DNA_DEFICIENT_GENES))
+                                                     "random_germline"] + list (DNA_DEFICIENT_GENES) +
+                                                     ["_".join(gene, "germline") for i in DNA_DEFICIENT_GENES])
             csv_file.writeheader()
             for sample in self.ids_dict.values():
                 group = sample.get_group()
@@ -588,6 +589,10 @@ class MutationsSummary(object):
                         row_dict[gene] = True
                     else:
                         row_dict[gene] = False
+                    if sample.get_gene_mutations(gene, False, ['germline']):
+                        row_dict["_".join(gene, "germline")] = True
+                    else:
+                        row_dict["_".join(gene, "germline")] = False 
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer, mutation_type):

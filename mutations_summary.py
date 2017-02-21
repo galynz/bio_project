@@ -585,14 +585,16 @@ class MutationsSummary(object):
                 row_dict["HR_germline"] = sample.hr_deficient.get('germline', 0)
                 row_dict["random_germline"] = sample.random_deficient.get('germline', 0)
                 for gene in DNA_DEFICIENT_GENES:
-                    if sample.get_gene_mutations(gene, False, mutation_type):
-                        row_dict[gene] = True
-                    else:
-                        row_dict[gene] = False
-                    if sample.get_gene_mutations(gene, False, ['germline']):
-                        row_dict["_".join([gene, "germline"])] = True
-                    else:
-                        row_dict["_".join([gene, "germline"])] = False 
+                    row_dict[gene] = sample.get_gene_mutations(gene, False, mutation_type)
+                    row_dict["_".join([gene, "germline"])] = sample.get_gene_mutations(gene, False, ['germline'])
+#                    if sample.get_gene_mutations(gene, False, mutation_type):
+#                        row_dict[gene] = True
+#                    else:
+#                        row_dict[gene] = False
+#                    if sample.get_gene_mutations(gene, False, ['germline']):
+#                        row_dict["_".join([gene, "germline"])] = True
+#                    else:
+#                        row_dict["_".join([gene, "germline"])] = False 
                 csv_file.writerow(row_dict)
                     
     def write_mutation_load_output(self, output_path,cancer, mutation_type):

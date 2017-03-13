@@ -82,7 +82,7 @@ def main():
         writer = csv.DictWriter(output_file, fieldnames=["tcga_id", "neoantigen_count"])
         writer.writeheader()
         with open(hla_path, "rb") as hla_file:
-            csv_reader = csv.DictReader(hla_path)
+            csv_reader = csv.DictReader(hla_file)
             for info in csv_reader:
                 tcga_id = info["tcga_id"]
                 hla_list = ["HLA-" + i.replace("*", "") for i in [info["A1"], info["A2"], info["B1"], info["B2"], info["C1"], info["C2"]]]
